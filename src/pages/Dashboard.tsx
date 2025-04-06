@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect } from "react";
 import {
   Card,
@@ -25,8 +24,8 @@ const Dashboard = () => {
   const [searchTerm, setSearchTerm] = useState("");
   const [addProductOpen, setAddProductOpen] = useState(false);
   const [historyOpen, setHistoryOpen] = useState(false);
-  const [selectedProduct, setSelectedProduct] = useState<string>("");
-  const [selectedProductName, setSelectedProductName] = useState<string>("");
+  const [selectedProduct, setSelectedProduct] = useState<string | null>(null);
+  const [selectedProductName, setSelectedProductName] = useState<string | null>(null);
   const [priceHistory, setPriceHistory] = useState<any[]>([]);
   const [historyLoading, setHistoryLoading] = useState(false);
   const { toast } = useToast();
@@ -175,6 +174,20 @@ const Dashboard = () => {
   return (
     <DashboardLayout>
       <div className="space-y-6">
+        <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 mb-6">
+          <ProductSearch 
+            searchTerm={searchTerm}
+            setSearchTerm={setSearchTerm}
+          />
+          <Button 
+            onClick={() => setAddProductOpen(true)}
+            className="flex items-center gap-1"
+          >
+            <Plus className="h-4 w-4" />
+            Add Product
+          </Button>
+        </div>
+        
         <Tabs defaultValue="overview">
           <TabsList>
             <TabsTrigger value="overview">Overview</TabsTrigger>
@@ -256,31 +269,13 @@ const Dashboard = () => {
             </div>
             
             <Card>
-              <CardHeader className="flex items-center justify-between space-y-0">
-                <div>
-                  <CardTitle>Products</CardTitle>
-                  <CardDescription>
-                    View and manage your product prices
-                  </CardDescription>
-                </div>
-                <div className="flex space-x-2">
-                  <Button 
-                    onClick={() => setAddProductOpen(true)}
-                    className="flex items-center gap-1"
-                  >
-                    <Plus className="h-4 w-4" />
-                    Add Product
-                  </Button>
-                </div>
+              <CardHeader>
+                <CardTitle>Products</CardTitle>
+                <CardDescription>
+                  View and manage your product prices
+                </CardDescription>
               </CardHeader>
               <CardContent>
-                <div className="mb-6">
-                  <ProductSearch 
-                    searchTerm={searchTerm}
-                    setSearchTerm={setSearchTerm}
-                  />
-                </div>
-                
                 <div className="rounded-md border">
                   <div className="relative w-full overflow-auto">
                     <ProductTable 
@@ -323,8 +318,8 @@ const Dashboard = () => {
       <PriceHistoryModal
         open={historyOpen}
         onOpenChange={setHistoryOpen}
-        productCode={selectedProduct}
-        productName={selectedProductName}
+        productCode={selectedProduct || ""}
+        productName={selectedProductName || ""}
         priceHistory={priceHistory}
         loading={historyLoading}
       />
