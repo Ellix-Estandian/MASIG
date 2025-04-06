@@ -2,6 +2,8 @@
 import React, { createContext, useState, useContext, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useToast } from '@/components/ui/use-toast';
+import { supabase } from "@/integrations/supabase/client";
+import type { User as SupabaseUser } from '@supabase/supabase-js';
 
 type User = {
   id: string;
@@ -15,7 +17,7 @@ type AuthContextType = {
   loading: boolean;
   signUp: (email: string, password: string, firstName: string, lastName: string) => Promise<void>;
   signIn: (email: string, password: string) => Promise<void>;
-  signOut: () => void;
+  signOut: () => Promise<void>;
   isAuthenticated: boolean;
 };
 
@@ -29,45 +31,77 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
 
   // On initial load, check if user is already logged in
   useEffect(() => {
-    const checkUser = async () => {
-      try {
-        const storedUser = localStorage.getItem('user');
-        if (storedUser) {
-          // In a real app with Supabase, we would validate the session here
-          setUser(JSON.parse(storedUser));
+    const setupAuth = async () => {
+      setLoading(true);
+      
+      // Set up auth state listener FIRST
+      const { data: { subscription } } = supabase.auth.onAuthStateChange(
+        (event, session) => {
+          if (session && session.user) {
+            setUser({
+              id: session.user.id,
+              email: session.user.email || '',
+              firstName: session.user.user_metadata?.firstName,
+              lastName: session.user.user_metadata?.lastName,
+            });
+          } else {
+            setUser(null);
+          }
+          setLoading(false);
         }
-      } catch (error) {
-        console.error('Session check failed:', error);
-        localStorage.removeItem('user');
-      } finally {
-        setLoading(false);
+      );
+      
+      // THEN check for existing session
+      const { data: { session } } = await supabase.auth.getSession();
+      if (session && session.user) {
+        setUser({
+          id: session.user.id,
+          email: session.user.email || '',
+          firstName: session.user.user_metadata?.firstName,
+          lastName: session.user.user_metadata?.lastName,
+        });
       }
+      
+      setLoading(false);
+      
+      return () => {
+        subscription.unsubscribe();
+      };
     };
-
-    checkUser();
+    
+    setupAuth();
   }, []);
 
   const signUp = async (email: string, password: string, firstName: string, lastName: string) => {
     try {
       setLoading(true);
       
-      // This is a placeholder for Supabase authentication
-      // Once Supabase is connected, we'll replace this with actual signup logic
+      const { data, error } = await supabase.auth.signUp({
+        email,
+        password,
+        options: {
+          data: {
+            firstName,
+            lastName
+          }
+        }
+      });
       
-      // For now, we'll simulate a successful signup
+      if (error) throw error;
+      
       toast({
         title: "Account created successfully!",
-        description: "Please sign in with your credentials.",
+        description: "Please check your email for verification instructions.",
       });
       
       // Redirect to sign in page
       navigate('/signin');
-    } catch (error) {
+    } catch (error: any) {
       console.error('Signup error:', error);
       toast({
         variant: "destructive",
         title: "Error creating account",
-        description: "There was a problem creating your account. Please try again.",
+        description: error.message || "There was a problem creating your account. Please try again.",
       });
     } finally {
       setLoading(false);
@@ -78,50 +112,57 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     try {
       setLoading(true);
       
-      // This is a placeholder for Supabase authentication
-      // Once Supabase is connected, we'll replace this with actual signin logic
-      
-      // For now, we'll simulate a successful login with a mock user
-      const mockUser = {
-        id: '1',
+      const { data, error } = await supabase.auth.signInWithPassword({
         email,
-        firstName: 'Demo',
-        lastName: 'User'
-      };
+        password
+      });
       
-      setUser(mockUser);
-      localStorage.setItem('user', JSON.stringify(mockUser));
+      if (error) throw error;
       
       toast({
         title: "Welcome back!",
         description: "You've successfully signed in.",
       });
       
+      // User will be set by the onAuthStateChange listener
       // Redirect to dashboard
       navigate('/dashboard');
-    } catch (error) {
+    } catch (error: any) {
       console.error('Signin error:', error);
       toast({
         variant: "destructive",
         title: "Sign in failed",
-        description: "Invalid email or password. Please try again.",
+        description: error.message || "Invalid email or password. Please try again.",
       });
     } finally {
       setLoading(false);
     }
   };
 
-  const signOut = () => {
-    // Clear user data
-    localStorage.removeItem('user');
-    setUser(null);
-    
-    toast({
-      title: "Signed out successfully",
-    });
-    
-    // Redirect to sign in page
-    navigate('/signin');
+  const signOut = async () => {
+    setLoading(true);
+    try {
+      const { error } = await supabase.auth.signOut();
+      
+      if (error) throw error;
+      
+      // User will be set to null by the onAuthStateChange listener
+      toast({
+        title: "Signed out successfully",
+      });
+      
+      // Redirect to sign in page
+      navigate('/signin');
+    } catch (error: any) {
+      console.error('Signout error:', error);
+      toast({
+        variant: "destructive",
+        title: "Sign out failed",
+        description: error.message || "There was a problem signing out. Please try again.",
+      });
+    } finally {
+      setLoading(false);
+    }
   };
 
   return (
