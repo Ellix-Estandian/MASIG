@@ -1,5 +1,5 @@
 
-import React from "react";
+import React, { useState, useEffect } from "react";
 import {
   Card,
   CardContent,
@@ -8,31 +8,169 @@ import {
   CardTitle,
 } from "@/components/ui/card";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { Package, ArrowUp, ArrowDown, Loader2 } from "lucide-react";
+import { Package, ArrowUp, ArrowDown, Plus } from "lucide-react";
 import DashboardLayout from "@/components/layouts/DashboardLayout";
 import { Button } from "@/components/ui/button";
-
-// This will be replaced with actual data from Supabase
-const mockProducts = [
-  { id: "1", code: "P001", description: "Premium Laptop", unit: "pc", currentPrice: 1299.99, priceChange: 2.5 },
-  { id: "2", code: "P002", description: "Wireless Mouse", unit: "pc", currentPrice: 49.99, priceChange: -5.0 },
-  { id: "3", code: "P003", description: "4K Monitor", unit: "pc", currentPrice: 399.99, priceChange: 0 },
-  { id: "4", code: "P004", description: "SSD Drive 1TB", unit: "pc", currentPrice: 129.99, priceChange: -2.3 },
-  { id: "5", code: "P005", description: "USB-C Cable", unit: "pc", currentPrice: 12.99, priceChange: 1.5 },
-];
+import { useToast } from "@/components/ui/use-toast";
+import { supabase } from "@/integrations/supabase/client";
+import ProductSearch from "@/components/ProductSearch";
+import ProductTable, { Product } from "@/components/ProductTable";
+import AddProductModal from "@/components/AddProductModal";
+import PriceHistoryModal from "@/components/PriceHistoryModal";
 
 const Dashboard = () => {
-  const [loading, setLoading] = React.useState(false);
+  const [loading, setLoading] = useState(true);
+  const [products, setProducts] = useState<Product[]>([]);
+  const [filteredProducts, setFilteredProducts] = useState<Product[]>([]);
+  const [searchTerm, setSearchTerm] = useState("");
+  const [addProductOpen, setAddProductOpen] = useState(false);
+  const [historyOpen, setHistoryOpen] = useState(false);
+  const [selectedProduct, setSelectedProduct] = useState<string>("");
+  const [selectedProductName, setSelectedProductName] = useState<string>("");
+  const [priceHistory, setPriceHistory] = useState<any[]>([]);
+  const [historyLoading, setHistoryLoading] = useState(false);
+  const { toast } = useToast();
 
-  // In a real implementation, we would fetch products from Supabase here
-  React.useEffect(() => {
-    // Simulate loading data
+  // Fetch products with their latest price and percentage change
+  const fetchProducts = async () => {
     setLoading(true);
-    const timer = setTimeout(() => {
+    try {
+      const { data, error } = await supabase.rpc('get_products_with_price_info');
+      
+      if (error) throw error;
+      
+      setProducts(data || []);
+      setFilteredProducts(data || []);
+    } catch (error: any) {
+      console.error("Error fetching products:", error);
+      toast({
+        variant: "destructive",
+        title: "Error fetching products",
+        description: error.message || "An error occurred while fetching products",
+      });
+    } finally {
       setLoading(false);
-    }, 1000);
-    return () => clearTimeout(timer);
+    }
+  };
+
+  // Fetch price history for a specific product
+  const fetchPriceHistory = async (productCode: string) => {
+    setHistoryLoading(true);
+    try {
+      // Get product details
+      const { data: productData, error: productError } = await supabase
+        .from("product")
+        .select("description")
+        .eq("prodcode", productCode)
+        .single();
+      
+      if (productError) throw productError;
+      
+      setSelectedProductName(productData?.description || "");
+      
+      // Get price history
+      const { data, error } = await supabase
+        .from("pricehist")
+        .select("*")
+        .eq("prodcode", productCode)
+        .order("effdate", { ascending: false });
+      
+      if (error) throw error;
+      
+      setPriceHistory(data || []);
+      setHistoryOpen(true);
+    } catch (error: any) {
+      console.error("Error fetching price history:", error);
+      toast({
+        variant: "destructive",
+        title: "Error fetching price history",
+        description: error.message || "An error occurred while fetching price history",
+      });
+    } finally {
+      setHistoryLoading(false);
+    }
+  };
+
+  // Filter products based on search term
+  useEffect(() => {
+    if (searchTerm.trim() === "") {
+      setFilteredProducts(products);
+    } else {
+      const filtered = products.filter(
+        (product) =>
+          product.prodcode.toLowerCase().includes(searchTerm.toLowerCase()) ||
+          product.description.toLowerCase().includes(searchTerm.toLowerCase())
+      );
+      setFilteredProducts(filtered);
+    }
+  }, [searchTerm, products]);
+
+  // Initial fetch
+  useEffect(() => {
+    // Create SQL function if it doesn't exist
+    const createSQLFunction = async () => {
+      try {
+        const { error } = await supabase.rpc('get_products_with_price_info');
+        
+        // If the function doesn't exist, we'll get an error
+        if (error && error.message.includes('function get_products_with_price_info() does not exist')) {
+          // Function doesn't exist, create it
+          const { error: createError } = await supabase.rpc('create_price_info_function');
+          
+          if (createError) {
+            console.error("Error creating function:", createError);
+            // Fallback to fetching products manually
+            fetchProducts();
+          } else {
+            // Function created, fetch products
+            fetchProducts();
+          }
+        } else {
+          // Function exists, fetch products
+          fetchProducts();
+        }
+      } catch (error) {
+        console.error("Error checking function:", error);
+        // Fallback to fetching products manually
+        fetchProducts();
+      }
+    };
+    
+    createSQLFunction();
   }, []);
+
+  const handleViewHistory = (productCode: string) => {
+    setSelectedProduct(productCode);
+    fetchPriceHistory(productCode);
+  };
+
+  const getStats = () => {
+    const totalProducts = products.length;
+    const priceIncreases = products.filter(p => p.price_change !== null && p.price_change > 0).length;
+    const priceDecreases = products.filter(p => p.price_change !== null && p.price_change < 0).length;
+    
+    // Calculate average price change
+    let totalChange = 0;
+    let changeCount = 0;
+    
+    products.forEach(product => {
+      if (product.price_change !== null) {
+        totalChange += product.price_change;
+        changeCount++;
+      }
+    });
+    
+    const avgChange = changeCount > 0 ? totalChange / changeCount : 0;
+    
+    return {
+      totalProducts,
+      priceIncreases,
+      priceDecreases,
+      avgChange
+    };
+  };
+
+  const stats = getStats();
 
   return (
     <DashboardLayout>
@@ -53,9 +191,9 @@ const Dashboard = () => {
                   <Package className="h-4 w-4 text-muted-foreground" />
                 </CardHeader>
                 <CardContent>
-                  <div className="text-2xl font-bold">248</div>
+                  <div className="text-2xl font-bold">{stats.totalProducts}</div>
                   <p className="text-xs text-muted-foreground">
-                    +12 this week
+                    In inventory
                   </p>
                 </CardContent>
               </Card>
@@ -67,9 +205,9 @@ const Dashboard = () => {
                   <ArrowUp className="h-4 w-4 text-emerald-500" />
                 </CardHeader>
                 <CardContent>
-                  <div className="text-2xl font-bold">36</div>
+                  <div className="text-2xl font-bold">{stats.priceIncreases}</div>
                   <p className="text-xs text-muted-foreground">
-                    Last 30 days
+                    Products with price increases
                   </p>
                 </CardContent>
               </Card>
@@ -81,9 +219,9 @@ const Dashboard = () => {
                   <ArrowDown className="h-4 w-4 text-rose-500" />
                 </CardHeader>
                 <CardContent>
-                  <div className="text-2xl font-bold">19</div>
+                  <div className="text-2xl font-bold">{stats.priceDecreases}</div>
                   <p className="text-xs text-muted-foreground">
-                    Last 30 days
+                    Products with price decreases
                   </p>
                 </CardContent>
               </Card>
@@ -106,120 +244,65 @@ const Dashboard = () => {
                   </svg>
                 </CardHeader>
                 <CardContent>
-                  <div className="text-2xl font-bold">+2.4%</div>
+                  <div className="text-2xl font-bold">
+                    {stats.avgChange > 0 ? "+" : ""}
+                    {stats.avgChange.toFixed(2)}%
+                  </div>
                   <p className="text-xs text-muted-foreground">
-                    Last 30 days
+                    Overall price trend
                   </p>
                 </CardContent>
               </Card>
             </div>
             
             <Card>
-              <CardHeader>
-                <CardTitle>Recent Products</CardTitle>
-                <CardDescription>
-                  View and manage your product prices
-                </CardDescription>
+              <CardHeader className="flex items-center justify-between space-y-0">
+                <div>
+                  <CardTitle>Products</CardTitle>
+                  <CardDescription>
+                    View and manage your product prices
+                  </CardDescription>
+                </div>
+                <div className="flex space-x-2">
+                  <Button 
+                    onClick={() => setAddProductOpen(true)}
+                    className="flex items-center gap-1"
+                  >
+                    <Plus className="h-4 w-4" />
+                    Add Product
+                  </Button>
+                </div>
               </CardHeader>
               <CardContent>
-                {loading ? (
-                  <div className="flex justify-center items-center h-64">
-                    <Loader2 className="h-8 w-8 text-brand-600 animate-spin" />
+                <div className="mb-6">
+                  <ProductSearch 
+                    searchTerm={searchTerm}
+                    setSearchTerm={setSearchTerm}
+                  />
+                </div>
+                
+                <div className="rounded-md border">
+                  <div className="relative w-full overflow-auto">
+                    <ProductTable 
+                      products={filteredProducts}
+                      loading={loading}
+                      onViewHistory={handleViewHistory}
+                    />
                   </div>
-                ) : (
-                  <>
-                    <div className="rounded-md border">
-                      <div className="relative w-full overflow-auto">
-                        <table className="w-full caption-bottom text-sm">
-                          <thead>
-                            <tr className="border-b bg-muted/50">
-                              <th className="h-10 px-4 text-left align-middle font-medium">
-                                Product Code
-                              </th>
-                              <th className="h-10 px-4 text-left align-middle font-medium">
-                                Description
-                              </th>
-                              <th className="h-10 px-4 text-left align-middle font-medium">
-                                Unit
-                              </th>
-                              <th className="h-10 px-4 text-left align-middle font-medium">
-                                Current Price
-                              </th>
-                              <th className="h-10 px-4 text-left align-middle font-medium">
-                                Change
-                              </th>
-                              <th className="h-10 px-4 text-right align-middle font-medium">
-                                Actions
-                              </th>
-                            </tr>
-                          </thead>
-                          <tbody>
-                            {mockProducts.map((product) => (
-                              <tr
-                                key={product.id}
-                                className="border-b transition-colors hover:bg-muted/50 data-[state=selected]:bg-muted"
-                              >
-                                <td className="p-4 align-middle font-medium">
-                                  {product.code}
-                                </td>
-                                <td className="p-4 align-middle">
-                                  {product.description}
-                                </td>
-                                <td className="p-4 align-middle">
-                                  {product.unit}
-                                </td>
-                                <td className="p-4 align-middle">
-                                  ${product.currentPrice.toFixed(2)}
-                                </td>
-                                <td className="p-4 align-middle">
-                                  <div className="flex items-center">
-                                    {product.priceChange > 0 ? (
-                                      <ArrowUp className="mr-1 h-4 w-4 text-emerald-500" />
-                                    ) : product.priceChange < 0 ? (
-                                      <ArrowDown className="mr-1 h-4 w-4 text-rose-500" />
-                                    ) : (
-                                      <span className="mr-5"></span>
-                                    )}
-                                    <span
-                                      className={
-                                        product.priceChange > 0
-                                          ? "text-emerald-500"
-                                          : product.priceChange < 0
-                                          ? "text-rose-500"
-                                          : ""
-                                      }
-                                    >
-                                      {product.priceChange > 0 ? "+" : ""}
-                                      {product.priceChange === 0
-                                        ? "0.0%"
-                                        : product.priceChange.toFixed(1) + "%"}
-                                    </span>
-                                  </div>
-                                </td>
-                                <td className="p-4 align-middle text-right">
-                                  <Button variant="ghost" size="sm">
-                                    View History
-                                  </Button>
-                                </td>
-                              </tr>
-                            ))}
-                          </tbody>
-                        </table>
-                      </div>
-                    </div>
-                    <div className="flex items-center justify-end space-x-2 py-4">
-                      <Button variant="outline" size="sm">
-                        Previous
-                      </Button>
-                      <Button variant="outline" size="sm">
-                        Next
-                      </Button>
-                    </div>
-                  </>
-                )}
+                </div>
+                
+                <div className="flex items-center justify-end space-x-2 py-4">
+                  <Button variant="outline" size="sm" disabled>
+                    Previous
+                  </Button>
+                  <Button variant="outline" size="sm" disabled>
+                    Next
+                  </Button>
+                </div>
               </CardContent>
             </Card>
           </TabsContent>
+          
           <TabsContent value="analytics" className="h-[400px] flex items-center justify-center text-muted-foreground">
             Analytics content coming soon
           </TabsContent>
@@ -228,6 +311,23 @@ const Dashboard = () => {
           </TabsContent>
         </Tabs>
       </div>
+      
+      {/* Add Product Modal */}
+      <AddProductModal
+        open={addProductOpen}
+        onOpenChange={setAddProductOpen}
+        onProductAdded={fetchProducts}
+      />
+      
+      {/* Price History Modal */}
+      <PriceHistoryModal
+        open={historyOpen}
+        onOpenChange={setHistoryOpen}
+        productCode={selectedProduct}
+        productName={selectedProductName}
+        priceHistory={priceHistory}
+        loading={historyLoading}
+      />
     </DashboardLayout>
   );
 };
