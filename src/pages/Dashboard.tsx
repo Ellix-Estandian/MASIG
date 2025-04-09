@@ -1,3 +1,4 @@
+
 import React, { useState, useEffect } from "react";
 import {
   Card,
@@ -17,6 +18,12 @@ import ProductTable, { Product } from "@/components/ProductTable";
 import AddProductModal from "@/components/AddProductModal";
 import PriceHistoryModal from "@/components/PriceHistoryModal";
 
+interface PriceHistory {
+  prodcode: string;
+  effdate: string;
+  unitprice: number;
+}
+
 const Dashboard = () => {
   const [loading, setLoading] = useState(true);
   const [products, setProducts] = useState<Product[]>([]);
@@ -26,7 +33,7 @@ const Dashboard = () => {
   const [historyOpen, setHistoryOpen] = useState(false);
   const [selectedProduct, setSelectedProduct] = useState<string | null>(null);
   const [selectedProductName, setSelectedProductName] = useState<string | null>(null);
-  const [priceHistory, setPriceHistory] = useState<any[]>([]);
+  const [priceHistory, setPriceHistory] = useState<PriceHistory[]>([]);
   const [historyLoading, setHistoryLoading] = useState(false);
   const { toast } = useToast();
 
