@@ -31,6 +31,7 @@ const Dashboard = () => {
   const [searchTerm, setSearchTerm] = useState("");
   const [addProductOpen, setAddProductOpen] = useState(false);
   const [historyOpen, setHistoryOpen] = useState(false);
+  // Fixed type definitions for these state variables
   const [selectedProduct, setSelectedProduct] = useState<string | null>(null);
   const [selectedProductName, setSelectedProductName] = useState<string | null>(null);
   const [priceHistory, setPriceHistory] = useState<PriceHistory[]>([]);
