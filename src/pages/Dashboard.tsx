@@ -1,98 +1,36 @@
 
 import React, { useState, useEffect } from "react";
-import {
-  Card,
-  CardContent,
-  CardDescription,
-  CardHeader,
-  CardTitle,
-} from "@/components/ui/card";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { Package, ArrowUp, ArrowDown, Plus } from "lucide-react";
+import { Plus } from "lucide-react";
 import DashboardLayout from "@/components/layouts/DashboardLayout";
 import { Button } from "@/components/ui/button";
-import { useToast } from "@/components/ui/use-toast";
-import { supabase } from "@/integrations/supabase/client";
 import ProductSearch from "@/components/ProductSearch";
-import ProductTable, { Product } from "@/components/ProductTable";
 import AddProductModal from "@/components/AddProductModal";
 import PriceHistoryModal from "@/components/PriceHistoryModal";
-
-export interface PriceHistory {
-  prodcode: string;
-  effdate: string;
-  unitprice: number;
-}
+import { useProductData } from "@/hooks/useProductData";
+import { usePriceHistory } from "@/hooks/usePriceHistory";
+import DashboardStats from "@/components/dashboard/DashboardStats";
+import ProductsOverview from "@/components/dashboard/ProductsOverview";
+import AnalyticsTab from "@/components/dashboard/AnalyticsTab";
+import ReportsTab from "@/components/dashboard/ReportsTab";
+import { calculateProductStats } from "@/utils/productStats";
+import { Product } from "@/components/ProductTable";
 
 const Dashboard = () => {
-  const [loading, setLoading] = useState(true);
-  const [products, setProducts] = useState<Product[]>([]);
-  const [filteredProducts, setFilteredProducts] = useState<Product[]>([]);
   const [searchTerm, setSearchTerm] = useState("");
   const [addProductOpen, setAddProductOpen] = useState(false);
   const [historyOpen, setHistoryOpen] = useState(false);
-  // Fixed type definitions for these state variables
-  const [selectedProduct, setSelectedProduct] = useState<string | null>(null);
-  const [selectedProductName, setSelectedProductName] = useState<string | null>(null);
-  const [priceHistory, setPriceHistory] = useState<PriceHistory[]>([]);
-  const [historyLoading, setHistoryLoading] = useState(false);
-  const { toast } = useToast();
-
-  const fetchProducts = async () => {
-    setLoading(true);
-    try {
-      const { data, error } = await supabase.rpc('get_products_with_price_info');
-      
-      if (error) throw error;
-      
-      setProducts(data || []);
-      setFilteredProducts(data || []);
-    } catch (error: any) {
-      console.error("Error fetching products:", error);
-      toast({
-        variant: "destructive",
-        title: "Error fetching products",
-        description: error.message || "An error occurred while fetching products",
-      });
-    } finally {
-      setLoading(false);
-    }
-  };
-
-  const fetchPriceHistory = async (productCode: string) => {
-    setHistoryLoading(true);
-    try {
-      const { data: productData, error: productError } = await supabase
-        .from("product")
-        .select("description")
-        .eq("prodcode", productCode)
-        .single();
-      
-      if (productError) throw productError;
-      
-      setSelectedProductName(productData?.description || "");
-      
-      const { data, error } = await supabase
-        .from("pricehist")
-        .select("*")
-        .eq("prodcode", productCode)
-        .order("effdate", { ascending: false });
-      
-      if (error) throw error;
-      
-      setPriceHistory(data || []);
-      setHistoryOpen(true);
-    } catch (error: any) {
-      console.error("Error fetching price history:", error);
-      toast({
-        variant: "destructive",
-        title: "Error fetching price history",
-        description: error.message || "An error occurred while fetching price history",
-      });
-    } finally {
-      setHistoryLoading(false);
-    }
-  };
+  const [filteredProducts, setFilteredProducts] = useState<Product[]>([]);
+  
+  // Custom hooks for data fetching
+  const { loading, products, fetchProducts } = useProductData();
+  const { 
+    historyLoading, 
+    selectedProduct, 
+    selectedProductName, 
+    priceHistory, 
+    fetchPriceHistory 
+  } = usePriceHistory();
 
   useEffect(() => {
     if (searchTerm.trim() === "") {
@@ -107,63 +45,14 @@ const Dashboard = () => {
     }
   }, [searchTerm, products]);
 
-  useEffect(() => {
-    const createSQLFunction = async () => {
-      try {
-        const { error } = await supabase.rpc('get_products_with_price_info');
-        
-        if (error && error.message.includes('function get_products_with_price_info() does not exist')) {
-          const { error: createError } = await supabase.rpc('create_price_info_function');
-          
-          if (createError) {
-            console.error("Error creating function:", createError);
-            fetchProducts();
-          } else {
-            fetchProducts();
-          }
-        } else {
-          fetchProducts();
-        }
-      } catch (error) {
-        console.error("Error checking function:", error);
-        fetchProducts();
-      }
-    };
-    
-    createSQLFunction();
-  }, []);
-
-  const handleViewHistory = (productCode: string) => {
-    setSelectedProduct(productCode);
-    fetchPriceHistory(productCode);
+  const handleViewHistory = async (productCode: string) => {
+    const success = await fetchPriceHistory(productCode);
+    if (success) {
+      setHistoryOpen(true);
+    }
   };
 
-  const getStats = () => {
-    const totalProducts = products.length;
-    const priceIncreases = products.filter(p => p.price_change !== null && p.price_change > 0).length;
-    const priceDecreases = products.filter(p => p.price_change !== null && p.price_change < 0).length;
-    
-    let totalChange = 0;
-    let changeCount = 0;
-    
-    products.forEach(product => {
-      if (product.price_change !== null) {
-        totalChange += product.price_change;
-        changeCount++;
-      }
-    });
-    
-    const avgChange = changeCount > 0 ? totalChange / changeCount : 0;
-    
-    return {
-      totalProducts,
-      priceIncreases,
-      priceDecreases,
-      avgChange
-    };
-  };
-
-  const stats = getStats();
+  const stats = calculateProductStats(products);
 
   return (
     <DashboardLayout>
@@ -189,114 +78,19 @@ const Dashboard = () => {
             <TabsTrigger value="reports">Reports</TabsTrigger>
           </TabsList>
           <TabsContent value="overview" className="space-y-6">
-            <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
-              <Card>
-                <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-                  <CardTitle className="text-sm font-medium">
-                    Total Products
-                  </CardTitle>
-                  <Package className="h-4 w-4 text-muted-foreground" />
-                </CardHeader>
-                <CardContent>
-                  <div className="text-2xl font-bold">{stats.totalProducts}</div>
-                  <p className="text-xs text-muted-foreground">
-                    In inventory
-                  </p>
-                </CardContent>
-              </Card>
-              <Card>
-                <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-                  <CardTitle className="text-sm font-medium">
-                    Price Increases
-                  </CardTitle>
-                  <ArrowUp className="h-4 w-4 text-emerald-500" />
-                </CardHeader>
-                <CardContent>
-                  <div className="text-2xl font-bold">{stats.priceIncreases}</div>
-                  <p className="text-xs text-muted-foreground">
-                    Products with price increases
-                  </p>
-                </CardContent>
-              </Card>
-              <Card>
-                <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-                  <CardTitle className="text-sm font-medium">
-                    Price Decreases
-                  </CardTitle>
-                  <ArrowDown className="h-4 w-4 text-rose-500" />
-                </CardHeader>
-                <CardContent>
-                  <div className="text-2xl font-bold">{stats.priceDecreases}</div>
-                  <p className="text-xs text-muted-foreground">
-                    Products with price decreases
-                  </p>
-                </CardContent>
-              </Card>
-              <Card>
-                <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-                  <CardTitle className="text-sm font-medium">
-                    Average Price Change
-                  </CardTitle>
-                  <svg
-                    xmlns="http://www.w3.org/2000/svg"
-                    viewBox="0 0 24 24"
-                    fill="none"
-                    stroke="currentColor"
-                    strokeLinecap="round"
-                    strokeLinejoin="round"
-                    strokeWidth="2"
-                    className="h-4 w-4 text-muted-foreground"
-                  >
-                    <path d="M22 12h-4l-3 9L9 3l-3 9H2" />
-                  </svg>
-                </CardHeader>
-                <CardContent>
-                  <div className="text-2xl font-bold">
-                    {stats.avgChange > 0 ? "+" : ""}
-                    {stats.avgChange.toFixed(2)}%
-                  </div>
-                  <p className="text-xs text-muted-foreground">
-                    Overall price trend
-                  </p>
-                </CardContent>
-              </Card>
-            </div>
-            
-            <Card>
-              <CardHeader>
-                <CardTitle>Products</CardTitle>
-                <CardDescription>
-                  View and manage your product prices
-                </CardDescription>
-              </CardHeader>
-              <CardContent>
-                <div className="rounded-md border">
-                  <div className="relative w-full overflow-auto">
-                    <ProductTable 
-                      products={filteredProducts}
-                      loading={loading}
-                      onViewHistory={handleViewHistory}
-                    />
-                  </div>
-                </div>
-                
-                <div className="flex items-center justify-end space-x-2 py-4">
-                  <Button variant="outline" size="sm" disabled>
-                    Previous
-                  </Button>
-                  <Button variant="outline" size="sm" disabled>
-                    Next
-                  </Button>
-                </div>
-              </CardContent>
-            </Card>
+            <DashboardStats stats={stats} />
+            <ProductsOverview 
+              products={filteredProducts}
+              loading={loading}
+              onViewHistory={handleViewHistory}
+            />
           </TabsContent>
           
-          <TabsContent value="analytics" className="h-[400px] flex items-center justify-center text-muted-foreground">
-            Analytics content coming soon
+          <TabsContent value="analytics">
+            <AnalyticsTab />
           </TabsContent>
-          <TabsContent value="reports" className="h-[400px] flex items-center justify-center text-muted-foreground">
-            Reports content coming soon
+          <TabsContent value="reports">
+            <ReportsTab />
           </TabsContent>
         </Tabs>
       </div>
