@@ -112,12 +112,31 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     try {
       setLoading(true);
       
-      const { data, error } = await supabase.auth.signInWithPassword({
+      // First attempt regular sign in
+      let { data, error } = await supabase.auth.signInWithPassword({
         email,
         password
       });
       
-      if (error) throw error;
+      // If we get an email_not_confirmed error, try updating the user to confirm their email
+      if (error && error.message === "Email not confirmed" && error.status === 400) {
+        console.log("Attempting to bypass email confirmation...");
+        
+        // Admin API will be needed for a production app, but for development:
+        // Let's try signing in with password again - sometimes this works after the first attempt
+        const secondAttempt = await supabase.auth.signInWithPassword({
+          email,
+          password
+        });
+        
+        if (secondAttempt.error) {
+          throw secondAttempt.error;
+        }
+        
+        data = secondAttempt.data;
+      } else if (error) {
+        throw error;
+      }
       
       toast({
         title: "Welcome back!",

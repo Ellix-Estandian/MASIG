@@ -18,7 +18,7 @@ import ProductTable, { Product } from "@/components/ProductTable";
 import AddProductModal from "@/components/AddProductModal";
 import PriceHistoryModal from "@/components/PriceHistoryModal";
 
-interface PriceHistory {
+export interface PriceHistory {
   prodcode: string;
   effdate: string;
   unitprice: number;
