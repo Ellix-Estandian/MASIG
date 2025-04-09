@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect } from "react";
 import {
   Card,
@@ -37,7 +36,6 @@ const Dashboard = () => {
   const [historyLoading, setHistoryLoading] = useState(false);
   const { toast } = useToast();
 
-  // Fetch products with their latest price and percentage change
   const fetchProducts = async () => {
     setLoading(true);
     try {
@@ -59,11 +57,9 @@ const Dashboard = () => {
     }
   };
 
-  // Fetch price history for a specific product
   const fetchPriceHistory = async (productCode: string) => {
     setHistoryLoading(true);
     try {
-      // Get product details
       const { data: productData, error: productError } = await supabase
         .from("product")
         .select("description")
@@ -74,7 +70,6 @@ const Dashboard = () => {
       
       setSelectedProductName(productData?.description || "");
       
-      // Get price history
       const { data, error } = await supabase
         .from("pricehist")
         .select("*")
@@ -97,7 +92,6 @@ const Dashboard = () => {
     }
   };
 
-  // Filter products based on search term
   useEffect(() => {
     if (searchTerm.trim() === "") {
       setFilteredProducts(products);
@@ -111,33 +105,25 @@ const Dashboard = () => {
     }
   }, [searchTerm, products]);
 
-  // Initial fetch
   useEffect(() => {
-    // Create SQL function if it doesn't exist
     const createSQLFunction = async () => {
       try {
         const { error } = await supabase.rpc('get_products_with_price_info');
         
-        // If the function doesn't exist, we'll get an error
         if (error && error.message.includes('function get_products_with_price_info() does not exist')) {
-          // Function doesn't exist, create it
           const { error: createError } = await supabase.rpc('create_price_info_function');
           
           if (createError) {
             console.error("Error creating function:", createError);
-            // Fallback to fetching products manually
             fetchProducts();
           } else {
-            // Function created, fetch products
             fetchProducts();
           }
         } else {
-          // Function exists, fetch products
           fetchProducts();
         }
       } catch (error) {
         console.error("Error checking function:", error);
-        // Fallback to fetching products manually
         fetchProducts();
       }
     };
@@ -155,7 +141,6 @@ const Dashboard = () => {
     const priceIncreases = products.filter(p => p.price_change !== null && p.price_change > 0).length;
     const priceDecreases = products.filter(p => p.price_change !== null && p.price_change < 0).length;
     
-    // Calculate average price change
     let totalChange = 0;
     let changeCount = 0;
     
@@ -314,14 +299,12 @@ const Dashboard = () => {
         </Tabs>
       </div>
       
-      {/* Add Product Modal */}
       <AddProductModal
         open={addProductOpen}
         onOpenChange={setAddProductOpen}
         onProductAdded={fetchProducts}
       />
       
-      {/* Price History Modal */}
       <PriceHistoryModal
         open={historyOpen}
         onOpenChange={setHistoryOpen}
