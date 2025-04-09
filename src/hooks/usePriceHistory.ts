@@ -4,6 +4,10 @@ import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/components/ui/use-toast";
 import { PriceHistory } from "@/types/product";
 
+interface RPCError {
+  message: string;
+}
+
 export const usePriceHistory = () => {
   const [historyLoading, setHistoryLoading] = useState(false);
   const [selectedProduct, setSelectedProduct] = useState<string | null>(null);

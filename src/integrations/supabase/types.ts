@@ -283,7 +283,20 @@ export type Database = {
       [_ in never]: never
     }
     Functions: {
-      [_ in never]: never
+      create_price_info_function: {
+        Args: Record<PropertyKey, never>
+        Returns: undefined
+      }
+      get_products_with_price_info: {
+        Args: Record<PropertyKey, never>
+        Returns: {
+          prodcode: string
+          description: string
+          unit: string
+          current_price: number
+          price_change: number
+        }[]
+      }
     }
     Enums: {
       [_ in never]: never
