@@ -20,7 +20,7 @@ export const useProductData = () => {
     try {
       console.log("Fetching products...");
       
-      // Explicitly type the RPC call
+      // Use a type assertion to override TypeScript's type checking for the RPC call
       const { data, error } = await supabase.rpc('get_products_with_price_info') as unknown as ProductsWithPriceInfo;
       
       if (error) {
