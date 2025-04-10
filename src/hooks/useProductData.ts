@@ -4,22 +4,22 @@ import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/components/ui/use-toast";
 import { Product } from "@/components/ProductTable";
 
-interface RPCError {
-  message: string;
-}
-
 export const useProductData = () => {
   const [loading, setLoading] = useState(true);
   const [products, setProducts] = useState<Product[]>([]);
   const { toast } = useToast();
 
+  // Properly type the RPC function return
+  interface ProductsWithPriceInfo {
+    data: Product[] | null;
+    error: { message: string } | null;
+  }
+
   const fetchProducts = async () => {
     setLoading(true);
     try {
-      const { data, error } = await supabase.rpc('get_products_with_price_info') as {
-        data: Product[] | null;
-        error: RPCError | null;
-      };
+      // Explicitly type the RPC call
+      const { data, error } = await supabase.rpc('get_products_with_price_info') as ProductsWithPriceInfo;
       
       if (error) throw error;
       
@@ -36,21 +36,19 @@ export const useProductData = () => {
     }
   };
 
+  // Properly type the function call
   const initializeFunction = async () => {
     try {
-      const { error } = await supabase.rpc('get_products_with_price_info') as {
-        data: any;
-        error: RPCError | null;
-      };
+      const { error } = await supabase.rpc('get_products_with_price_info') as ProductsWithPriceInfo;
       
       if (error && error.message.includes('function get_products_with_price_info() does not exist')) {
-        const { error: createError } = await supabase.rpc('create_price_info_function') as {
+        const createResult = await supabase.rpc('create_price_info_function') as {
           data: any;
-          error: RPCError | null;
+          error: { message: string } | null;
         };
         
-        if (createError) {
-          console.error("Error creating function:", createError);
+        if (createResult.error) {
+          console.error("Error creating function:", createResult.error);
           fetchProducts();
         } else {
           fetchProducts();
