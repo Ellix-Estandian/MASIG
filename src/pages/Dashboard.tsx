@@ -1,11 +1,8 @@
 
 import React, { useState, useEffect } from "react";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { Plus } from "lucide-react";
 import DashboardLayout from "@/components/layouts/DashboardLayout";
-import { Button } from "@/components/ui/button";
 import ProductSearch from "@/components/ProductSearch";
-import AddProductModal from "@/components/AddProductModal";
 import PriceHistoryModal from "@/components/PriceHistoryModal";
 import { useProductData } from "@/hooks/useProductData";
 import { usePriceHistory } from "@/hooks/usePriceHistory";
@@ -18,7 +15,6 @@ import { Product } from "@/components/ProductTable";
 
 const Dashboard = () => {
   const [searchTerm, setSearchTerm] = useState("");
-  const [addProductOpen, setAddProductOpen] = useState(false);
   const [historyOpen, setHistoryOpen] = useState(false);
   const [filteredProducts, setFilteredProducts] = useState<Product[]>([]);
   
@@ -52,12 +48,6 @@ const Dashboard = () => {
     }
   };
 
-  const handleProductAdded = async () => {
-    // Manually refresh products after adding a new one
-    await fetchProducts();
-    setAddProductOpen(false);
-  };
-
   const stats = calculateProductStats(products);
 
   return (
@@ -68,13 +58,6 @@ const Dashboard = () => {
             searchTerm={searchTerm}
             setSearchTerm={setSearchTerm}
           />
-          <Button 
-            onClick={() => setAddProductOpen(true)}
-            className="flex items-center gap-1"
-          >
-            <Plus className="h-4 w-4" />
-            Add Product
-          </Button>
         </div>
         
         <Tabs defaultValue="overview">
@@ -100,12 +83,6 @@ const Dashboard = () => {
           </TabsContent>
         </Tabs>
       </div>
-      
-      <AddProductModal
-        open={addProductOpen}
-        onOpenChange={setAddProductOpen}
-        onProductAdded={handleProductAdded}
-      />
       
       <PriceHistoryModal
         open={historyOpen}
