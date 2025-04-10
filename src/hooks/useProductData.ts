@@ -19,7 +19,7 @@ export const useProductData = () => {
     setLoading(true);
     try {
       // Explicitly type the RPC call
-      const { data, error } = await supabase.rpc('get_products_with_price_info') as ProductsWithPriceInfo;
+      const { data, error } = await supabase.rpc('get_products_with_price_info') as unknown as ProductsWithPriceInfo;
       
       if (error) throw error;
       
@@ -36,29 +36,40 @@ export const useProductData = () => {
     }
   };
 
-  // Properly type the function call
+  // Create the function if it doesn't exist, then fetch products
   const initializeFunction = async () => {
     try {
-      const { error } = await supabase.rpc('get_products_with_price_info') as ProductsWithPriceInfo;
+      // Try to call the function to check if it exists
+      const { error } = await supabase.rpc('get_products_with_price_info') as unknown as ProductsWithPriceInfo;
       
       if (error && error.message.includes('function get_products_with_price_info() does not exist')) {
-        const createResult = await supabase.rpc('create_price_info_function') as {
-          data: any;
-          error: { message: string } | null;
-        };
+        // Function doesn't exist, so create it
+        const functionResponse = await fetch(`${supabase.supabaseUrl}/functions/v1/create_price_info_function`, {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            'Authorization': `Bearer ${supabase.supabaseKey}`
+          },
+        });
         
-        if (createResult.error) {
-          console.error("Error creating function:", createResult.error);
-          fetchProducts();
-        } else {
-          fetchProducts();
+        if (!functionResponse.ok) {
+          throw new Error('Failed to create price info function');
         }
+        
+        // After creating, fetch products
+        await fetchProducts();
       } else {
-        fetchProducts();
+        // Function exists, just fetch products
+        await fetchProducts();
       }
-    } catch (error) {
-      console.error("Error checking function:", error);
-      fetchProducts();
+    } catch (error: any) {
+      console.error("Error initializing:", error);
+      toast({
+        variant: "destructive",
+        title: "Error initializing data",
+        description: error.message || "An error occurred while setting up the application",
+      });
+      setLoading(false);
     }
   };
 

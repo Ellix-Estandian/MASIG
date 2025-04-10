@@ -34,12 +34,12 @@ serve(async (req) => {
               pricehist ph
             INNER JOIN (
               SELECT 
-                prodcode, 
-                MAX(effdate) as max_date
+                ph_inner.prodcode, 
+                MAX(ph_inner.effdate) as max_date
               FROM 
-                pricehist
+                pricehist ph_inner
               GROUP BY 
-                prodcode
+                ph_inner.prodcode
             ) latest ON ph.prodcode = latest.prodcode AND ph.effdate = latest.max_date
           ),
           previous_prices AS (
@@ -57,12 +57,12 @@ serve(async (req) => {
                 pricehist ph1
               INNER JOIN (
                 SELECT 
-                  prodcode, 
-                  MAX(effdate) as max_date
+                  ph2.prodcode, 
+                  MAX(ph2.effdate) as max_date
                 FROM 
-                  pricehist
+                  pricehist ph2
                 GROUP BY 
-                  prodcode
+                  ph2.prodcode
               ) latest ON ph1.prodcode = latest.prodcode AND ph1.effdate < latest.max_date
               GROUP BY 
                 ph1.prodcode
