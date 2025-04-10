@@ -72,7 +72,7 @@ serve(async (req) => {
             p.prodcode,
             p.description,
             p.unit,
-            lp.unitprice as current_price,
+            COALESCE(lp.unitprice, NULL) as current_price,
             CASE 
               WHEN pp.unitprice IS NOT NULL AND pp.unitprice != 0 
               THEN ((lp.unitprice - pp.unitprice) / pp.unitprice) * 100 
