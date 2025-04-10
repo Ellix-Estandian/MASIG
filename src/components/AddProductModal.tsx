@@ -76,10 +76,7 @@ const AddProductModal = ({ open, onOpenChange, onProductAdded }: AddProductModal
       setUnit("");
       setPrice("");
       
-      // Close modal
-      onOpenChange(false);
-      
-      // Refresh product list
+      // Close modal and refresh product list
       onProductAdded();
     } catch (error: any) {
       console.error("Error adding product:", error);

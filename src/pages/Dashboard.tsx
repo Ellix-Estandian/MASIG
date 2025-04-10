@@ -52,6 +52,12 @@ const Dashboard = () => {
     }
   };
 
+  const handleProductAdded = async () => {
+    // Manually refresh products after adding a new one
+    await fetchProducts();
+    setAddProductOpen(false);
+  };
+
   const stats = calculateProductStats(products);
 
   return (
@@ -98,7 +104,7 @@ const Dashboard = () => {
       <AddProductModal
         open={addProductOpen}
         onOpenChange={setAddProductOpen}
-        onProductAdded={fetchProducts}
+        onProductAdded={handleProductAdded}
       />
       
       <PriceHistoryModal
