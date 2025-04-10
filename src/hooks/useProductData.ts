@@ -43,17 +43,13 @@ export const useProductData = () => {
       const { error } = await supabase.rpc('get_products_with_price_info') as unknown as ProductsWithPriceInfo;
       
       if (error && error.message.includes('function get_products_with_price_info() does not exist')) {
-        // Function doesn't exist, so create it
-        const functionResponse = await fetch(`${supabase.supabaseUrl}/functions/v1/create_price_info_function`, {
+        // Function doesn't exist, so invoke the Edge Function
+        const { error: invokeError } = await supabase.functions.invoke('create_price_info_function', {
           method: 'POST',
-          headers: {
-            'Content-Type': 'application/json',
-            'Authorization': `Bearer ${supabase.supabaseKey}`
-          },
         });
         
-        if (!functionResponse.ok) {
-          throw new Error('Failed to create price info function');
+        if (invokeError) {
+          throw new Error(`Failed to create price info function: ${invokeError.message}`);
         }
         
         // After creating, fetch products
