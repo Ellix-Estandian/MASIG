@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect } from "react";
 import DashboardLayout from "@/components/layouts/DashboardLayout";
 import ProductSearch from "@/components/ProductSearch";
@@ -7,7 +6,7 @@ import { useProductData } from "@/hooks/useProductData";
 import { usePriceHistory } from "@/hooks/usePriceHistory";
 import { Product } from "@/components/ProductTable";
 import { Button } from "@/components/ui/button";
-import { Edit, Plus, Trash2 } from "lucide-react";
+import { Plus } from "lucide-react";
 import AddProductModal from "@/components/AddProductModal";
 import {
   Card,
@@ -37,6 +36,15 @@ import {
   AlertDialogHeader,
   AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog";
+import { Edit, Trash2 } from "lucide-react";
 
 const Products = () => {
   const [searchTerm, setSearchTerm] = useState("");
@@ -47,6 +55,8 @@ const Products = () => {
   const [selectedProductForEdit, setSelectedProductForEdit] = useState<Product | null>(null);
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
   const [productToDelete, setProductToDelete] = useState<string | null>(null);
+  const [selectedProductDetails, setSelectedProductDetails] = useState<Product | null>(null);
+  const [productDetailsOpen, setProductDetailsOpen] = useState(false);
   
   // Custom hooks for data fetching
   const { loading, products, fetchProducts } = useProductData();
@@ -72,6 +82,11 @@ const Products = () => {
     }
   }, [searchTerm, products]);
 
+  const handleProductClick = (product: Product) => {
+    setSelectedProductDetails(product);
+    setProductDetailsOpen(true);
+  };
+
   const handleViewHistory = async (productCode: string) => {
     const success = await fetchPriceHistory(productCode);
     if (success) {
@@ -87,6 +102,7 @@ const Products = () => {
   const handleEditClick = (product: Product) => {
     setSelectedProductForEdit(product);
     setEditProductOpen(true);
+    setProductDetailsOpen(false);
   };
 
   const handleProductUpdated = () => {
@@ -97,6 +113,7 @@ const Products = () => {
   const handleDeleteClick = (productCode: string) => {
     setProductToDelete(productCode);
     setDeleteDialogOpen(true);
+    setProductDetailsOpen(false);
   };
 
   const handleDeleteConfirm = async () => {
@@ -183,12 +200,15 @@ const Products = () => {
                       <TableHead>Description</TableHead>
                       <TableHead>Unit</TableHead>
                       <TableHead>Current Price</TableHead>
-                      <TableHead>Actions</TableHead>
                     </TableRow>
                   </TableHeader>
                   <TableBody>
                     {filteredProducts.map((product) => (
-                      <TableRow key={product.prodcode}>
+                      <TableRow 
+                        key={product.prodcode}
+                        className="cursor-pointer hover:bg-muted/50"
+                        onClick={() => handleProductClick(product)}
+                      >
                         <TableCell className="font-medium">{product.prodcode}</TableCell>
                         <TableCell>{product.description}</TableCell>
                         <TableCell>{product.unit}</TableCell>
@@ -196,32 +216,6 @@ const Products = () => {
                           {product.current_price !== null 
                             ? `$${product.current_price.toFixed(2)}` 
                             : 'No price set'}
-                        </TableCell>
-                        <TableCell>
-                          <div className="flex items-center space-x-2">
-                            <Button 
-                              variant="ghost" 
-                              size="sm" 
-                              onClick={() => handleViewHistory(product.prodcode)}
-                            >
-                              View History
-                            </Button>
-                            <Button 
-                              variant="outline" 
-                              size="icon" 
-                              onClick={() => handleEditClick(product)}
-                            >
-                              <Edit className="h-4 w-4" />
-                            </Button>
-                            <Button 
-                              variant="outline" 
-                              size="icon" 
-                              className="text-red-500 hover:text-red-600" 
-                              onClick={() => handleDeleteClick(product.prodcode)}
-                            >
-                              <Trash2 className="h-4 w-4" />
-                            </Button>
-                          </div>
                         </TableCell>
                       </TableRow>
                     ))}
@@ -233,7 +227,70 @@ const Products = () => {
         </Card>
       </div>
       
-      {/* Modals */}
+      {/* Product Details Modal */}
+      {selectedProductDetails && (
+        <Dialog open={productDetailsOpen} onOpenChange={setProductDetailsOpen}>
+          <DialogContent>
+            <DialogHeader>
+              <DialogTitle>Product Details</DialogTitle>
+              <DialogDescription>
+                Details for {selectedProductDetails.prodcode}
+              </DialogDescription>
+            </DialogHeader>
+            
+            <div className="space-y-4 py-2">
+              <div>
+                <h4 className="text-sm font-medium">Product Code</h4>
+                <p className="text-sm">{selectedProductDetails.prodcode}</p>
+              </div>
+              <div>
+                <h4 className="text-sm font-medium">Description</h4>
+                <p className="text-sm">{selectedProductDetails.description}</p>
+              </div>
+              <div>
+                <h4 className="text-sm font-medium">Unit</h4>
+                <p className="text-sm">{selectedProductDetails.unit}</p>
+              </div>
+              <div>
+                <h4 className="text-sm font-medium">Current Price</h4>
+                <p className="text-sm">
+                  {selectedProductDetails.current_price !== null 
+                    ? `$${selectedProductDetails.current_price.toFixed(2)}` 
+                    : 'No price set'}
+                </p>
+              </div>
+            </div>
+            
+            <DialogFooter className="flex flex-col sm:flex-row gap-2">
+              <Button 
+                variant="outline" 
+                onClick={() => handleViewHistory(selectedProductDetails.prodcode)}
+                className="w-full sm:w-auto"
+              >
+                View Price History
+              </Button>
+              <Button 
+                variant="outline" 
+                onClick={() => handleEditClick(selectedProductDetails)}
+                className="w-full sm:w-auto"
+              >
+                <Edit className="h-4 w-4 mr-2" />
+                Edit Product
+              </Button>
+              <Button 
+                variant="destructive" 
+                onClick={() => handleDeleteClick(selectedProductDetails.prodcode)}
+                className="w-full sm:w-auto"
+              >
+                <Trash2 className="h-4 w-4 mr-2" />
+                Delete Product
+              </Button>
+            </DialogFooter>
+          </DialogContent>
+        </Dialog>
+      )}
+      
+      {/* Other Modals */}
       <PriceHistoryModal
         open={historyOpen}
         onOpenChange={setHistoryOpen}

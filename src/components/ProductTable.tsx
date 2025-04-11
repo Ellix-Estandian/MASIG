@@ -1,7 +1,6 @@
 
 import React from "react";
-import { ArrowUp, ArrowDown, History } from "lucide-react";
-import { Button } from "@/components/ui/button";
+import { ArrowUp, ArrowDown } from "lucide-react";
 import {
   Table,
   TableBody,
@@ -23,9 +22,10 @@ interface ProductTableProps {
   products: Product[];
   loading: boolean;
   onViewHistory: (productCode: string) => void;
+  onRowClick?: (product: Product) => void;
 }
 
-const ProductTable = ({ products, loading, onViewHistory }: ProductTableProps) => {
+const ProductTable = ({ products, loading, onViewHistory, onRowClick }: ProductTableProps) => {
   if (loading) {
     return (
       <div className="w-full py-8 text-center">
@@ -52,12 +52,15 @@ const ProductTable = ({ products, loading, onViewHistory }: ProductTableProps) =
           <TableHead>Unit</TableHead>
           <TableHead>Current Price</TableHead>
           <TableHead>Change</TableHead>
-          <TableHead className="text-right">Actions</TableHead>
         </TableRow>
       </TableHeader>
       <TableBody>
         {products.map((product) => (
-          <TableRow key={product.prodcode}>
+          <TableRow 
+            key={product.prodcode}
+            className={onRowClick ? "cursor-pointer hover:bg-muted/50" : ""}
+            onClick={() => onRowClick && onRowClick(product)}
+          >
             <TableCell className="font-medium">{product.prodcode}</TableCell>
             <TableCell>{product.description}</TableCell>
             <TableCell>{product.unit}</TableCell>
@@ -94,16 +97,6 @@ const ProductTable = ({ products, loading, onViewHistory }: ProductTableProps) =
               ) : (
                 "N/A"
               )}
-            </TableCell>
-            <TableCell className="text-right">
-              <Button 
-                variant="ghost" 
-                size="sm" 
-                onClick={() => onViewHistory(product.prodcode)}
-              >
-                <History className="h-4 w-4 mr-1" />
-                View History
-              </Button>
             </TableCell>
           </TableRow>
         ))}

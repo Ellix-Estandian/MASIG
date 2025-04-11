@@ -2,17 +2,13 @@
 import React, { useState, useEffect } from "react";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import DashboardLayout from "@/components/layouts/DashboardLayout";
-import ProductSearch from "@/components/ProductSearch";
 import PriceHistoryModal from "@/components/PriceHistoryModal";
 import { useProductData } from "@/hooks/useProductData";
 import { usePriceHistory } from "@/hooks/usePriceHistory";
 import DashboardStats from "@/components/dashboard/DashboardStats";
 import ProductsOverview from "@/components/dashboard/ProductsOverview";
-import ReportsTab from "@/components/dashboard/ReportsTab";
 import { calculateProductStats } from "@/utils/productStats";
 import { Product } from "@/components/ProductTable";
-import { Button } from "@/components/ui/button";
-import { Plus } from "lucide-react";
 import AddProductModal from "@/components/AddProductModal";
 
 const Dashboard = () => {
@@ -71,18 +67,6 @@ const Dashboard = () => {
     (currentPage + 1) * productsPerPage
   );
 
-  const goToNextPage = () => {
-    if (currentPage < totalPages - 1) {
-      setCurrentPage(currentPage + 1);
-    }
-  };
-
-  const goToPreviousPage = () => {
-    if (currentPage > 0) {
-      setCurrentPage(currentPage - 1);
-    }
-  };
-
   return (
     <DashboardLayout>
       <div className="space-y-6">
@@ -93,7 +77,6 @@ const Dashboard = () => {
         <Tabs defaultValue="overview">
           <TabsList>
             <TabsTrigger value="overview">Overview</TabsTrigger>
-            <TabsTrigger value="reports">Reports</TabsTrigger>
           </TabsList>
           <TabsContent value="overview" className="space-y-6">
             <DashboardStats stats={stats} />
@@ -101,35 +84,10 @@ const Dashboard = () => {
               products={currentProducts}
               loading={loading}
               onViewHistory={handleViewHistory}
+              currentPage={currentPage}
+              setCurrentPage={setCurrentPage}
+              totalPages={totalPages}
             />
-            
-            <div className="flex items-center justify-end space-x-2 py-4">
-              <Button 
-                variant="outline" 
-                size="sm" 
-                onClick={goToPreviousPage}
-                disabled={currentPage === 0}
-              >
-                Previous
-              </Button>
-              
-              <div className="text-sm text-muted-foreground">
-                Page {currentPage + 1} of {totalPages || 1}
-              </div>
-              
-              <Button 
-                variant="outline" 
-                size="sm" 
-                onClick={goToNextPage}
-                disabled={currentPage >= totalPages - 1}
-              >
-                Next
-              </Button>
-            </div>
-          </TabsContent>
-          
-          <TabsContent value="reports">
-            <ReportsTab />
           </TabsContent>
         </Tabs>
       </div>
