@@ -1,6 +1,5 @@
 
 import React, { useState, useEffect } from "react";
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import DashboardLayout from "@/components/layouts/DashboardLayout";
 import PriceHistoryModal from "@/components/PriceHistoryModal";
 import { useProductData } from "@/hooks/useProductData";
@@ -74,22 +73,17 @@ const Dashboard = () => {
           <h1 className="text-2xl font-bold">Dashboard Overview</h1>
         </div>
         
-        <Tabs defaultValue="overview">
-          <TabsList>
-            <TabsTrigger value="overview">Overview</TabsTrigger>
-          </TabsList>
-          <TabsContent value="overview" className="space-y-6">
-            <DashboardStats stats={stats} />
-            <ProductsOverview 
-              products={currentProducts}
-              loading={loading}
-              onViewHistory={handleViewHistory}
-              currentPage={currentPage}
-              setCurrentPage={setCurrentPage}
-              totalPages={totalPages}
-            />
-          </TabsContent>
-        </Tabs>
+        <div className="space-y-6">
+          <DashboardStats stats={stats} />
+          <ProductsOverview 
+            products={currentProducts}
+            loading={loading}
+            onViewHistory={handleViewHistory}
+            currentPage={currentPage}
+            setCurrentPage={setCurrentPage}
+            totalPages={totalPages}
+          />
+        </div>
       </div>
       
       <PriceHistoryModal
