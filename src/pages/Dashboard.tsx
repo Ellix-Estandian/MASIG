@@ -8,7 +8,6 @@ import { useProductData } from "@/hooks/useProductData";
 import { usePriceHistory } from "@/hooks/usePriceHistory";
 import DashboardStats from "@/components/dashboard/DashboardStats";
 import ProductsOverview from "@/components/dashboard/ProductsOverview";
-import AnalyticsTab from "@/components/dashboard/AnalyticsTab";
 import ReportsTab from "@/components/dashboard/ReportsTab";
 import { calculateProductStats } from "@/utils/productStats";
 import { Product } from "@/components/ProductTable";
@@ -21,6 +20,8 @@ const Dashboard = () => {
   const [historyOpen, setHistoryOpen] = useState(false);
   const [filteredProducts, setFilteredProducts] = useState<Product[]>([]);
   const [addProductOpen, setAddProductOpen] = useState(false);
+  const [currentPage, setCurrentPage] = useState(0);
+  const productsPerPage = 5;
   
   // Custom hooks for data fetching
   const { loading, products, fetchProducts } = useProductData();
@@ -43,6 +44,8 @@ const Dashboard = () => {
       );
       setFilteredProducts(filtered);
     }
+    // Reset to first page when search results change
+    setCurrentPage(0);
   }, [searchTerm, products]);
 
   const handleViewHistory = async (productCode: string) => {
@@ -59,38 +62,72 @@ const Dashboard = () => {
 
   const stats = calculateProductStats(products);
 
+  // Calculate total pages
+  const totalPages = Math.ceil(filteredProducts.length / productsPerPage);
+  
+  // Get current page products
+  const currentProducts = filteredProducts.slice(
+    currentPage * productsPerPage,
+    (currentPage + 1) * productsPerPage
+  );
+
+  const goToNextPage = () => {
+    if (currentPage < totalPages - 1) {
+      setCurrentPage(currentPage + 1);
+    }
+  };
+
+  const goToPreviousPage = () => {
+    if (currentPage > 0) {
+      setCurrentPage(currentPage - 1);
+    }
+  };
+
   return (
     <DashboardLayout>
       <div className="space-y-6">
         <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 mb-6">
-          <ProductSearch 
-            searchTerm={searchTerm}
-            setSearchTerm={setSearchTerm}
-          />
-          <Button onClick={() => setAddProductOpen(true)}>
-            <Plus className="h-4 w-4 mr-2" />
-            Add Product
-          </Button>
+          <h1 className="text-2xl font-bold">Dashboard Overview</h1>
         </div>
         
         <Tabs defaultValue="overview">
           <TabsList>
             <TabsTrigger value="overview">Overview</TabsTrigger>
-            <TabsTrigger value="analytics">Analytics</TabsTrigger>
             <TabsTrigger value="reports">Reports</TabsTrigger>
           </TabsList>
           <TabsContent value="overview" className="space-y-6">
             <DashboardStats stats={stats} />
             <ProductsOverview 
-              products={filteredProducts}
+              products={currentProducts}
               loading={loading}
               onViewHistory={handleViewHistory}
             />
+            
+            <div className="flex items-center justify-end space-x-2 py-4">
+              <Button 
+                variant="outline" 
+                size="sm" 
+                onClick={goToPreviousPage}
+                disabled={currentPage === 0}
+              >
+                Previous
+              </Button>
+              
+              <div className="text-sm text-muted-foreground">
+                Page {currentPage + 1} of {totalPages || 1}
+              </div>
+              
+              <Button 
+                variant="outline" 
+                size="sm" 
+                onClick={goToNextPage}
+                disabled={currentPage >= totalPages - 1}
+              >
+                Next
+              </Button>
+            </div>
           </TabsContent>
           
-          <TabsContent value="analytics">
-            <AnalyticsTab />
-          </TabsContent>
           <TabsContent value="reports">
             <ReportsTab />
           </TabsContent>
