@@ -1,11 +1,13 @@
 
-import React from "react";
+import React, { useState } from "react";
 import { Link } from "react-router-dom";
 import { useForm } from "react-hook-form";
 import { z } from "zod";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
+import { Checkbox } from "@/components/ui/checkbox";
+import { supabase } from "@/integrations/supabase/client";
 import {
   Form,
   FormControl,
@@ -16,6 +18,7 @@ import {
 } from "@/components/ui/form";
 import AuthLayout from "@/components/layouts/AuthLayout";
 import { useAuth } from "@/contexts/AuthContext";
+import { useUserRoles } from "@/hooks/useUserRoles";
 
 const signUpSchema = z.object({
   firstName: z.string().min(1, "First name is required"),
@@ -23,6 +26,7 @@ const signUpSchema = z.object({
   email: z.string().email("Invalid email address"),
   password: z.string().min(6, "Password must be at least 6 characters"),
   confirmPassword: z.string(),
+  isAdmin: z.boolean().default(false),
 }).refine(data => data.password === data.confirmPassword, {
   message: "Passwords do not match",
   path: ["confirmPassword"],
@@ -32,6 +36,32 @@ type SignUpFormValues = z.infer<typeof signUpSchema>;
 
 const SignUp = () => {
   const { signUp, loading } = useAuth();
+  const { isAdmin: currentUserIsAdmin } = useUserRoles();
+  const [showAdminOption, setShowAdminOption] = useState(false);
+
+  // Check if we should show admin option (for first user or if current user is admin)
+  React.useEffect(() => {
+    const checkIfFirstUser = async () => {
+      try {
+        // This is a simple way to check if this is potentially the first user
+        const { count, error } = await supabase
+          .from('user_roles')
+          .select('*', { count: 'exact', head: true });
+          
+        if (error) {
+          console.error("Error checking user count:", error);
+          return;
+        }
+        
+        // If no users yet or current user is admin, show the admin option
+        setShowAdminOption(count === 0 || currentUserIsAdmin);
+      } catch (error) {
+        console.error("Error checking if first user:", error);
+      }
+    };
+    
+    checkIfFirstUser();
+  }, [currentUserIsAdmin]);
 
   const form = useForm<SignUpFormValues>({
     resolver: zodResolver(signUpSchema),
@@ -41,11 +71,12 @@ const SignUp = () => {
       email: "",
       password: "",
       confirmPassword: "",
+      isAdmin: false,
     },
   });
 
   const onSubmit = async (values: SignUpFormValues) => {
-    await signUp(values.email, values.password, values.firstName, values.lastName);
+    await signUp(values.email, values.password, values.firstName, values.lastName, values.isAdmin);
   };
 
   return (
@@ -125,6 +156,29 @@ const SignUp = () => {
               </FormItem>
             )}
           />
+          
+          {showAdminOption && (
+            <FormField
+              control={form.control}
+              name="isAdmin"
+              render={({ field }) => (
+                <FormItem className="flex flex-row items-start space-x-3 space-y-0 rounded-md border p-4">
+                  <FormControl>
+                    <Checkbox
+                      checked={field.value}
+                      onCheckedChange={field.onChange}
+                    />
+                  </FormControl>
+                  <div className="space-y-1 leading-none">
+                    <FormLabel>Admin Account</FormLabel>
+                    <p className="text-sm text-gray-500">
+                      This account will have full administrative privileges
+                    </p>
+                  </div>
+                </FormItem>
+              )}
+            />
+          )}
           
           <Button 
             type="submit" 

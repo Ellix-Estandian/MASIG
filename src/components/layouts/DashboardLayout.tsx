@@ -8,11 +8,13 @@ import {
   Package, 
   Settings, 
   X, 
-  FileText
+  FileText,
+  Users
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
 import { useAuth } from "@/contexts/AuthContext";
+import { useUserRoles } from "@/hooks/useUserRoles";
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -29,9 +31,10 @@ interface DashboardLayoutProps {
 const DashboardLayout: React.FC<DashboardLayoutProps> = ({ children }) => {
   const [sidebarOpen, setSidebarOpen] = useState(false);
   const { user, signOut } = useAuth();
+  const { isAdmin } = useUserRoles();
   const location = useLocation();
   
-  // Reduced navigation items
+  // Navigation items
   const navItems = [
     {
       name: "Dashboard",
@@ -49,6 +52,15 @@ const DashboardLayout: React.FC<DashboardLayoutProps> = ({ children }) => {
       icon: FileText,
     }
   ];
+  
+  // Admin only nav items
+  const adminNavItems = isAdmin ? [
+    {
+      name: "User Management",
+      href: "/admin/users",
+      icon: Users,
+    }
+  ] : [];
 
   return (
     <div className="min-h-screen bg-gray-50">
@@ -93,6 +105,20 @@ const DashboardLayout: React.FC<DashboardLayoutProps> = ({ children }) => {
                   {item.name}
                 </Link>
               ))}
+              {adminNavItems.map((item) => (
+                <Link
+                  key={item.name}
+                  to={item.href}
+                  className={cn(
+                    "px-3 py-2 text-sm font-medium rounded-md transition-colors",
+                    location.pathname === item.href
+                      ? "bg-brand-50 text-brand-700"
+                      : "text-gray-700 hover:bg-gray-50"
+                  )}
+                >
+                  {item.name}
+                </Link>
+              ))}
             </nav>
             
             {/* Settings dropdown */}
@@ -113,6 +139,14 @@ const DashboardLayout: React.FC<DashboardLayoutProps> = ({ children }) => {
                 <DropdownMenuItem asChild>
                   <Link to="/settings">Settings</Link>
                 </DropdownMenuItem>
+                {isAdmin && (
+                  <>
+                    <DropdownMenuSeparator />
+                    <DropdownMenuItem asChild>
+                      <Link to="/admin/users">User Management</Link>
+                    </DropdownMenuItem>
+                  </>
+                )}
                 <DropdownMenuSeparator />
                 <DropdownMenuItem onClick={signOut}>
                   <LogOut className="h-4 w-4 mr-2" />
@@ -145,6 +179,27 @@ const DashboardLayout: React.FC<DashboardLayoutProps> = ({ children }) => {
           <div className="flex-grow overflow-y-auto py-4">
             <nav className="px-2 space-y-1">
               {navItems.map((item) => (
+                <Link
+                  key={item.name}
+                  to={item.href}
+                  className={cn(
+                    "group flex items-center px-2 py-2 text-sm font-medium rounded-md",
+                    location.pathname === item.href
+                      ? "bg-brand-50 text-brand-700"
+                      : "text-gray-700 hover:bg-gray-50"
+                  )}
+                  onClick={() => setSidebarOpen(false)}
+                >
+                  <item.icon className={cn(
+                    "mr-3 h-5 w-5",
+                    location.pathname === item.href
+                      ? "text-brand-700"
+                      : "text-gray-400 group-hover:text-gray-500"
+                  )} />
+                  {item.name}
+                </Link>
+              ))}
+              {adminNavItems.map((item) => (
                 <Link
                   key={item.name}
                   to={item.href}

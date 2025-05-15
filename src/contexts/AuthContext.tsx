@@ -15,7 +15,7 @@ type User = {
 type AuthContextType = {
   user: User | null;
   loading: boolean;
-  signUp: (email: string, password: string, firstName: string, lastName: string) => Promise<void>;
+  signUp: (email: string, password: string, firstName: string, lastName: string, isAdmin?: boolean) => Promise<void>;
   signIn: (email: string, password: string) => Promise<void>;
   signOut: () => Promise<void>;
   isAuthenticated: boolean;
@@ -72,7 +72,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     setupAuth();
   }, []);
 
-  const signUp = async (email: string, password: string, firstName: string, lastName: string) => {
+  const signUp = async (email: string, password: string, firstName: string, lastName: string, isAdmin = false) => {
     try {
       setLoading(true);
       
@@ -88,6 +88,34 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       });
       
       if (error) throw error;
+      
+      if (data.user) {
+        // Set up the user's role (admin or employee)
+        const roleToInsert = isAdmin ? 'admin' : 'employee';
+        const { error: roleError } = await supabase
+          .from('user_roles')
+          .insert({
+            user_id: data.user.id,
+            role: roleToInsert
+          });
+          
+        if (roleError) throw roleError;
+        
+        // Add default permissions for employees
+        if (!isAdmin) {
+          const defaultPermissions = ['view:products', 'view:reports'];
+          const permissionsToInsert = defaultPermissions.map(permission => ({
+            user_id: data.user.id,
+            permission
+          }));
+          
+          const { error: permissionError } = await supabase
+            .from('user_permissions')
+            .insert(permissionsToInsert);
+            
+          if (permissionError) throw permissionError;
+        }
+      }
       
       toast({
         title: "Account created successfully!",
