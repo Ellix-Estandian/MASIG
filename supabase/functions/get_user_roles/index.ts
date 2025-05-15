@@ -1,8 +1,12 @@
 
-// Database functions
+// This file adds the needed get_user_roles and get_user_permissions functions
+
+// get_user_roles function - for retrieving user roles
+export const get_user_roles = `
 CREATE OR REPLACE FUNCTION public.get_user_roles(user_id_param uuid)
 RETURNS TABLE(id uuid, user_id uuid, role text, created_at timestamptz) 
 LANGUAGE plpgsql SECURITY DEFINER
+SET search_path = public
 AS $$
 BEGIN
   RETURN QUERY
@@ -11,10 +15,14 @@ BEGIN
   WHERE ur.user_id = user_id_param;
 END;
 $$;
+`;
 
+// get_user_permissions function - for retrieving user permissions
+export const get_user_permissions = `
 CREATE OR REPLACE FUNCTION public.get_user_permissions(user_id_param uuid)
 RETURNS TABLE(id uuid, user_id uuid, permission text, created_at timestamptz) 
 LANGUAGE plpgsql SECURITY DEFINER
+SET search_path = public
 AS $$
 BEGIN
   RETURN QUERY
@@ -23,3 +31,4 @@ BEGIN
   WHERE up.user_id = user_id_param;
 END;
 $$;
+`;

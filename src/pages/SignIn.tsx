@@ -1,5 +1,5 @@
 
-import React from "react";
+import React, { useState } from "react";
 import { Link } from "react-router-dom";
 import { useForm } from "react-hook-form";
 import { z } from "zod";
@@ -16,6 +16,7 @@ import {
 } from "@/components/ui/form";
 import AuthLayout from "@/components/layouts/AuthLayout";
 import { useAuth } from "@/contexts/AuthContext";
+import { toast } from "@/components/ui/use-toast";
 
 const signInSchema = z.object({
   email: z.string().email("Invalid email address"),
@@ -26,6 +27,7 @@ type SignInFormValues = z.infer<typeof signInSchema>;
 
 const SignIn = () => {
   const { signIn, loading } = useAuth();
+  const [error, setError] = useState<string | null>(null);
 
   const form = useForm<SignInFormValues>({
     resolver: zodResolver(signInSchema),
@@ -36,7 +38,18 @@ const SignIn = () => {
   });
 
   const onSubmit = async (values: SignInFormValues) => {
-    await signIn(values.email, values.password);
+    setError(null);
+    try {
+      await signIn(values.email, values.password);
+    } catch (err: any) {
+      console.error("Error in SignIn component:", err);
+      setError(err.message || "Failed to sign in. Please try again.");
+      toast({
+        variant: "destructive",
+        title: "Sign in failed",
+        description: err.message || "Invalid email or password. Please try again.",
+      });
+    }
   };
 
   return (
@@ -73,6 +86,10 @@ const SignIn = () => {
               </FormItem>
             )}
           />
+          
+          {error && (
+            <div className="text-red-500 text-sm">{error}</div>
+          )}
           
           <Button 
             type="submit" 

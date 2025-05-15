@@ -36,26 +36,35 @@ export const useUserRoles = () => {
 
       setLoading(true);
       try {
-        // Fetch user roles directly from the user_roles table
+        // Try to fetch user roles directly from the user_roles table first
         const { data: rolesData, error: rolesError } = await supabase
           .from('user_roles')
           .select('*')
           .eq('user_id', user.id);
 
-        if (rolesError) throw rolesError;
+        if (rolesError) {
+          console.error('Error fetching user roles:', rolesError);
+          setRoles([]);
+        } else {
+          setRoles(rolesData?.map(r => r.role as Role) || []);
+        }
 
-        // Fetch user permissions directly from the user_permissions table
+        // Try to fetch user permissions directly from the user_permissions table
         const { data: permissionsData, error: permissionsError } = await supabase
           .from('user_permissions')
           .select('*')
           .eq('user_id', user.id);
 
-        if (permissionsError) throw permissionsError;
-
-        setRoles(rolesData?.map(r => r.role as Role) || []);
-        setPermissions(permissionsData?.map(p => p.permission) || []);
+        if (permissionsError) {
+          console.error('Error fetching user permissions:', permissionsError);
+          setPermissions([]);
+        } else {
+          setPermissions(permissionsData?.map(p => p.permission) || []);
+        }
       } catch (error) {
-        console.error('Error fetching user roles:', error);
+        console.error('Error in useUserRoles hook:', error);
+        setRoles([]);
+        setPermissions([]);
       } finally {
         setLoading(false);
       }

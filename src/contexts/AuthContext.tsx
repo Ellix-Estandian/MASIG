@@ -37,6 +37,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       // Set up auth state listener FIRST
       const { data: { subscription } } = supabase.auth.onAuthStateChange(
         (event, session) => {
+          console.log("Auth state changed:", event, session?.user?.id);
           if (session && session.user) {
             setUser({
               id: session.user.id,
@@ -53,6 +54,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       
       // THEN check for existing session
       const { data: { session } } = await supabase.auth.getSession();
+      console.log("Initial session check:", session?.user?.id);
       if (session && session.user) {
         setUser({
           id: session.user.id,
@@ -112,6 +114,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   const signIn = async (email: string, password: string) => {
     try {
       setLoading(true);
+      console.log("Attempting to sign in with:", email);
       
       // First attempt regular sign in
       let { data, error } = await supabase.auth.signInWithPassword({
@@ -136,6 +139,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         
         data = secondAttempt.data;
       } else if (error) {
+        console.error("Signin error:", error);
         throw error;
       }
       
@@ -144,7 +148,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         description: "You've successfully signed in.",
       });
       
-      // User will be set by the onAuthStateChange listener
+      console.log("Successfully signed in, redirecting to dashboard");
       // Redirect to dashboard
       navigate('/dashboard');
     } catch (error: any) {
