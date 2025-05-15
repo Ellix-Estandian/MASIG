@@ -36,24 +36,20 @@ export const useUserRoles = () => {
 
       setLoading(true);
       try {
-        // Fetch user roles
+        // Fetch user roles using rpc to avoid TypeScript errors with the table name
         const { data: rolesData, error: rolesError } = await supabase
-          .from('user_roles')
-          .select('role')
-          .eq('user_id', user.id);
+          .rpc('get_user_roles', { user_id_param: user.id });
 
         if (rolesError) throw rolesError;
 
-        // Fetch user permissions
+        // Fetch user permissions using rpc to avoid TypeScript errors with the table name
         const { data: permissionsData, error: permissionsError } = await supabase
-          .from('user_permissions')
-          .select('permission')
-          .eq('user_id', user.id);
+          .rpc('get_user_permissions', { user_id_param: user.id });
 
         if (permissionsError) throw permissionsError;
 
-        setRoles(rolesData.map(r => r.role));
-        setPermissions(permissionsData.map(p => p.permission));
+        setRoles(rolesData?.map(r => r.role as Role) || []);
+        setPermissions(permissionsData?.map(p => p.permission) || []);
       } catch (error) {
         console.error('Error fetching user roles:', error);
       } finally {

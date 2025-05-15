@@ -39,12 +39,12 @@ const App = () => (
               </ProtectedRoute>
             } />
             <Route path="/products" element={
-              <ProtectedRoute>
+              <ProtectedRoute requiredPermission="view:products">
                 <Products />
               </ProtectedRoute>
             } />
             <Route path="/reports" element={
-              <ProtectedRoute>
+              <ProtectedRoute requiredPermission="view:reports">
                 <Reports />
               </ProtectedRoute>
             } />

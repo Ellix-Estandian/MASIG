@@ -2,13 +2,18 @@
 import React, { useEffect } from "react";
 import { Navigate } from "react-router-dom";
 import { useAuth } from "@/contexts/AuthContext";
+import { useUserRoles } from "@/hooks/useUserRoles";
 
 interface ProtectedRouteProps {
   children: React.ReactNode;
+  requiredPermission?: string;
 }
 
-const ProtectedRoute: React.FC<ProtectedRouteProps> = ({ children }) => {
-  const { isAuthenticated, loading } = useAuth();
+const ProtectedRoute: React.FC<ProtectedRouteProps> = ({ children, requiredPermission }) => {
+  const { isAuthenticated, loading: authLoading } = useAuth();
+  const { hasPermission, loading: rolesLoading } = useUserRoles();
+  
+  const loading = authLoading || rolesLoading;
 
   if (loading) {
     return (
@@ -20,6 +25,11 @@ const ProtectedRoute: React.FC<ProtectedRouteProps> = ({ children }) => {
 
   if (!isAuthenticated) {
     return <Navigate to="/signin" replace />;
+  }
+
+  // If a specific permission is required, check for it
+  if (requiredPermission && !hasPermission(requiredPermission)) {
+    return <Navigate to="/dashboard" replace />;
   }
 
   return <>{children}</>;
