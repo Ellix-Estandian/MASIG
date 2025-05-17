@@ -322,9 +322,33 @@ export type Database = {
       }
     }
     Views: {
-      [_ in never]: never
+      safe_user_roles: {
+        Row: {
+          created_at: string | null
+          id: string | null
+          role: Database["public"]["Enums"]["app_role"] | null
+          user_id: string | null
+        }
+        Insert: {
+          created_at?: string | null
+          id?: string | null
+          role?: Database["public"]["Enums"]["app_role"] | null
+          user_id?: string | null
+        }
+        Update: {
+          created_at?: string | null
+          id?: string | null
+          role?: Database["public"]["Enums"]["app_role"] | null
+          user_id?: string | null
+        }
+        Relationships: []
+      }
     }
     Functions: {
+      get_current_user_role: {
+        Args: Record<PropertyKey, never>
+        Returns: string
+      }
       has_role: {
         Args: {
           requested_user_id: string
