@@ -47,6 +47,15 @@ interface User {
   permissions: string[];
 }
 
+interface AuthUser {
+  id: string;
+  email: string | null;
+  user_metadata: {
+    first_name?: string;
+    last_name?: string;
+  };
+}
+
 const permissionsList = [
   "view:products",
   "edit:products",
@@ -72,19 +81,20 @@ const UserManagement = () => {
     if (userIds.length === 0) return {};
     
     try {
-      // Use the more reliable admin API approach
-      const { data: authData, error: authError } = await supabase.auth.admin.listUsers();
+      // Use a different approach to fetch user data
+      // Using auth.users is causing typing errors, so we'll use a different approach
+      const { data: userData, error } = await supabase.auth.admin.listUsers();
       
-      if (authError) {
-        console.error('Error fetching user emails:', authError);
+      if (error) {
+        console.error('Error fetching users:', error);
         return {};
       }
       
       // Create a map of user IDs to their email addresses
       const userEmailMap: Record<string, {email: string, firstName?: string, lastName?: string}> = {};
       
-      if (authData?.users) {
-        authData.users.forEach(user => {
+      if (userData?.users) {
+        userData.users.forEach(user => {
           if (userIds.includes(user.id)) {
             userEmailMap[user.id] = {
               email: user.email || `user-${user.id.substring(0, 8)}`,
@@ -159,8 +169,7 @@ const UserManagement = () => {
         };
       });
       
-      // Try to get user profile info using a different approach
-      // Instead of using RPC, we'll try to fetch user information directly
+      // Try to get user profile info
       try {
         const userIds = fetchedUsers.map(user => user.id);
         const userEmailMap = await fetchUserEmails(userIds);

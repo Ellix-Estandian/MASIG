@@ -8,15 +8,49 @@ import { LogOut, Sun, Moon, Monitor } from "lucide-react";
 import { useTheme } from "@/contexts/ThemeContext";
 import { Label } from "@/components/ui/label";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { Switch } from "@/components/ui/switch";
+import { Toggle } from "@/components/ui/toggle";
 
 const Settings = () => {
   const { user, signOut } = useAuth();
   const { theme, setTheme } = useTheme();
+  
+  const handleThemeChange = (newTheme: "light" | "dark" | "system") => {
+    setTheme(newTheme);
+  };
 
   return (
     <DashboardLayout>
       <div className="space-y-6">
-        <h1 className="text-2xl font-bold">Settings</h1>
+        <div className="flex justify-between items-center">
+          <h1 className="text-2xl font-bold">Settings</h1>
+          <div className="flex items-center gap-2 bg-muted/30 p-1 rounded-lg border border-muted">
+            <Toggle
+              pressed={theme === "light"}
+              onPressedChange={() => handleThemeChange("light")}
+              aria-label="Light mode"
+              className="data-[state=on]:bg-white data-[state=on]:text-dark"
+            >
+              <Sun className="h-4 w-4" />
+            </Toggle>
+            <Toggle
+              pressed={theme === "dark"}
+              onPressedChange={() => handleThemeChange("dark")}
+              aria-label="Dark mode"
+              className="data-[state=on]:bg-slate-900 data-[state=on]:text-white"
+            >
+              <Moon className="h-4 w-4" />
+            </Toggle>
+            <Toggle
+              pressed={theme === "system"}
+              onPressedChange={() => handleThemeChange("system")}
+              aria-label="System preference"
+              className="data-[state=on]:bg-muted data-[state=on]:text-foreground"
+            >
+              <Monitor className="h-4 w-4" />
+            </Toggle>
+          </div>
+        </div>
         
         <Tabs defaultValue="profile" className="w-full">
           <TabsList className="mb-4 bg-muted/60 p-1">
@@ -65,34 +99,57 @@ const Settings = () => {
                 <CardDescription>Customize the application theme</CardDescription>
               </CardHeader>
               <CardContent>
-                <div className="space-y-4">
+                <div className="space-y-6">
                   <div>
                     <Label className="text-base mb-3 block">Theme</Label>
-                    <div className="flex flex-wrap gap-4">
-                      <Button 
-                        variant={theme === "light" ? "default" : "outline"}
-                        className={`flex-1 min-w-[120px] gap-2 ${theme === "light" ? "" : "border-2"}`}
-                        onClick={() => setTheme("light")}
-                      >
-                        <Sun className="h-5 w-5" />
-                        Light
-                      </Button>
-                      <Button 
-                        variant={theme === "dark" ? "default" : "outline"}
-                        className={`flex-1 min-w-[120px] gap-2 ${theme === "dark" ? "" : "border-2"}`}
-                        onClick={() => setTheme("dark")}
-                      >
-                        <Moon className="h-5 w-5" />
-                        Dark
-                      </Button>
-                      <Button 
-                        variant={theme === "system" ? "default" : "outline"}
-                        className={`flex-1 min-w-[120px] gap-2 ${theme === "system" ? "" : "border-2"}`}
-                        onClick={() => setTheme("system")}
-                      >
-                        <Monitor className="h-5 w-5" />
-                        System
-                      </Button>
+                    <div className="grid gap-6">
+                      <div className="flex items-center justify-between p-4 rounded-lg border-2 border-primary/20 bg-background/50 transition-all">
+                        <div className="flex items-center space-x-4">
+                          <div className="p-2 rounded-full bg-primary/10">
+                            <Sun className="h-6 w-6 text-primary" />
+                          </div>
+                          <div>
+                            <h3 className="text-base font-medium">Light Mode</h3>
+                            <p className="text-sm text-muted-foreground">Bright and clear interface</p>
+                          </div>
+                        </div>
+                        <Switch 
+                          checked={theme === "light"}
+                          onCheckedChange={() => handleThemeChange("light")}
+                        />
+                      </div>
+                      
+                      <div className="flex items-center justify-between p-4 rounded-lg border-2 border-primary/20 bg-background/50 transition-all">
+                        <div className="flex items-center space-x-4">
+                          <div className="p-2 rounded-full bg-primary/10">
+                            <Moon className="h-6 w-6 text-primary" />
+                          </div>
+                          <div>
+                            <h3 className="text-base font-medium">Dark Mode</h3>
+                            <p className="text-sm text-muted-foreground">Easy on the eyes in low light</p>
+                          </div>
+                        </div>
+                        <Switch 
+                          checked={theme === "dark"}
+                          onCheckedChange={() => handleThemeChange("dark")}
+                        />
+                      </div>
+                      
+                      <div className="flex items-center justify-between p-4 rounded-lg border-2 border-primary/20 bg-background/50 transition-all">
+                        <div className="flex items-center space-x-4">
+                          <div className="p-2 rounded-full bg-primary/10">
+                            <Monitor className="h-6 w-6 text-primary" />
+                          </div>
+                          <div>
+                            <h3 className="text-base font-medium">System Preference</h3>
+                            <p className="text-sm text-muted-foreground">Follow your system settings</p>
+                          </div>
+                        </div>
+                        <Switch 
+                          checked={theme === "system"}
+                          onCheckedChange={() => handleThemeChange("system")}
+                        />
+                      </div>
                     </div>
                   </div>
                 </div>
