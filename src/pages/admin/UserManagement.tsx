@@ -1,3 +1,4 @@
+
 import React, { useState, useEffect } from "react";
 import DashboardLayout from "@/components/layouts/DashboardLayout";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
@@ -102,7 +103,10 @@ const UserManagement = () => {
         if (!userRoleMap.has(row.user_id)) {
           userRoleMap.set(row.user_id, [row.role as Role]);
         } else {
-          userRoleMap.get(row.user_id)?.push(row.role as Role);
+          const roles = userRoleMap.get(row.user_id);
+          if (roles) {
+            roles.push(row.role as Role);
+          }
         }
       });
       
@@ -135,12 +139,14 @@ const UserManagement = () => {
       
       // Get user profile info directly from auth.users using admin API
       try {
-        // Fetch users' emails and names from auth admin API
-        const { data } = await supabase.auth.admin.listUsers();
+        // Fetch users directly from the database since we can't use admin API
+        const { data } = await supabase
+          .from('auth_users_view') // Using a view that gives access to user info
+          .select('id, email, user_metadata');
         
-        if (data && data.users) {
-          // Map auth users to their details
-          const authUsers = data.users;
+        if (data && data.length > 0) {
+          // Map users to their details
+          const authUsers = data;
           
           // Update user objects with email and name information
           fetchedUsers.forEach(user => {
