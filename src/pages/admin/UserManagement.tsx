@@ -36,6 +36,7 @@ import {
 import { useForm } from "react-hook-form";
 import { z } from "zod";
 import { zodResolver } from "@hookform/resolvers/zod";
+import { toast as sonnerToast } from "sonner";
 
 interface User {
   id: string;
@@ -66,6 +67,40 @@ const UserManagement = () => {
   useEffect(() => {
     fetchUsers();
   }, []);
+
+  const fetchUserEmails = async (userIds: string[]) => {
+    if (userIds.length === 0) return {};
+    
+    try {
+      // Use the more reliable admin API approach
+      const { data: authData, error: authError } = await supabase.auth.admin.listUsers();
+      
+      if (authError) {
+        console.error('Error fetching user emails:', authError);
+        return {};
+      }
+      
+      // Create a map of user IDs to their email addresses
+      const userEmailMap: Record<string, {email: string, firstName?: string, lastName?: string}> = {};
+      
+      if (authData?.users) {
+        authData.users.forEach(user => {
+          if (userIds.includes(user.id)) {
+            userEmailMap[user.id] = {
+              email: user.email || `user-${user.id.substring(0, 8)}`,
+              firstName: user.user_metadata?.first_name || "",
+              lastName: user.user_metadata?.last_name || "",
+            };
+          }
+        });
+      }
+      
+      return userEmailMap;
+    } catch (error) {
+      console.error('Error in fetchUserEmails:', error);
+      return {};
+    }
+  };
 
   const fetchUsers = async () => {
     try {
@@ -124,27 +159,27 @@ const UserManagement = () => {
         };
       });
       
-      // Try to get user profile info using RPC function if available
+      // Try to get user profile info using a different approach
+      // Instead of using RPC, we'll try to fetch user information directly
       try {
-        for (let i = 0; i < fetchedUsers.length; i++) {
-          const userId = fetchedUsers[i].id;
-          const { data: userData, error: profileError } = await supabase
-            .rpc('get_user_profile', { user_id_param: userId });
-          
-          if (profileError) {
-            console.error('Error fetching user profile:', profileError);
-            continue;
+        const userIds = fetchedUsers.map(user => user.id);
+        const userEmailMap = await fetchUserEmails(userIds);
+        
+        // Update user objects with email and name information
+        fetchedUsers.forEach(user => {
+          const userData = userEmailMap[user.id];
+          if (userData) {
+            user.email = userData.email || user.email;
+            user.firstName = userData.firstName || "";
+            user.lastName = userData.lastName || "";
           }
-          
-          if (userData && userData[0]) {
-            fetchedUsers[i].email = userData[0].email || fetchedUsers[i].email;
-            fetchedUsers[i].firstName = userData[0].first_name || "";
-            fetchedUsers[i].lastName = userData[0].last_name || "";
-          }
-        }
+        });
       } catch (err) {
         console.error('Error fetching user profiles:', err);
         // Continue without profile data
+        sonnerToast.error("Couldn't fetch user profile details", {
+          description: "Using placeholder information instead"
+        });
       }
       
       setUsers(fetchedUsers);
