@@ -16,13 +16,6 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table";
-import { 
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "@/components/ui/select";
 import { useUserRoles, UserRole, Role } from "@/hooks/useUserRoles";
 import {
   Dialog,
@@ -30,7 +23,6 @@ import {
   DialogDescription,
   DialogHeader,
   DialogTitle,
-  DialogTrigger,
   DialogClose,
 } from "@/components/ui/dialog";
 import {
@@ -136,9 +128,15 @@ const UserManagement = () => {
       try {
         for (let i = 0; i < fetchedUsers.length; i++) {
           const userId = fetchedUsers[i].id;
-          const { data: userData } = await supabase.rpc('get_user_profile', { user_id_param: userId });
+          const { data: userData, error: profileError } = await supabase
+            .rpc('get_user_profile', { user_id_param: userId });
           
-          if (userData && userData.length > 0) {
+          if (profileError) {
+            console.error('Error fetching user profile:', profileError);
+            continue;
+          }
+          
+          if (userData && userData[0]) {
             fetchedUsers[i].email = userData[0].email || fetchedUsers[i].email;
             fetchedUsers[i].firstName = userData[0].first_name || "";
             fetchedUsers[i].lastName = userData[0].last_name || "";
@@ -357,9 +355,9 @@ const UserManagement = () => {
           <h1 className="text-2xl font-bold">User Management</h1>
         </div>
 
-        <Card>
-          <CardHeader>
-            <CardTitle>Users</CardTitle>
+        <Card className="overflow-hidden border-2 border-primary/10 bg-card/50 backdrop-blur-sm">
+          <CardHeader className="bg-primary/5">
+            <CardTitle className="text-xl font-semibold">Users</CardTitle>
             <CardDescription>Manage user accounts and permissions</CardDescription>
           </CardHeader>
           <CardContent>
@@ -368,7 +366,7 @@ const UserManagement = () => {
                 <Search className="absolute left-2.5 top-2.5 h-4 w-4 text-gray-500" />
                 <Input
                   placeholder="Search users..."
-                  className="pl-8"
+                  className="pl-8 border-2 focus-visible:ring-primary"
                   value={searchTerm}
                   onChange={(e) => setSearchTerm(e.target.value)}
                 />
@@ -378,12 +376,12 @@ const UserManagement = () => {
             <Table>
               <TableCaption>List of all users in the system</TableCaption>
               <TableHeader>
-                <TableRow>
-                  <TableHead>Name</TableHead>
-                  <TableHead>Email</TableHead>
-                  <TableHead>Role</TableHead>
-                  <TableHead>Permissions</TableHead>
-                  <TableHead className="text-right">Actions</TableHead>
+                <TableRow className="bg-muted/50">
+                  <TableHead className="font-medium">Name</TableHead>
+                  <TableHead className="font-medium">Email</TableHead>
+                  <TableHead className="font-medium">Role</TableHead>
+                  <TableHead className="font-medium">Permissions</TableHead>
+                  <TableHead className="text-right font-medium">Actions</TableHead>
                 </TableRow>
               </TableHeader>
               <TableBody>
@@ -391,7 +389,7 @@ const UserManagement = () => {
                   <TableRow>
                     <TableCell colSpan={5} className="text-center">
                       <div className="flex justify-center py-4">
-                        <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-gray-900"></div>
+                        <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary"></div>
                       </div>
                     </TableCell>
                   </TableRow>
@@ -401,18 +399,20 @@ const UserManagement = () => {
                   </TableRow>
                 ) : (
                   filteredUsers.map((user) => (
-                    <TableRow key={user.id}>
-                      <TableCell>
-                        {user.firstName} {user.lastName}
+                    <TableRow key={user.id} className="hover:bg-muted/50 transition-colors">
+                      <TableCell className="font-medium">
+                        {user.firstName || user.lastName ? 
+                          `${user.firstName || ''} ${user.lastName || ''}`.trim() : 
+                          'No name provided'}
                       </TableCell>
                       <TableCell>{user.email}</TableCell>
                       <TableCell>
                         {user.roles.includes('admin') ? (
-                          <span className="inline-flex items-center px-2 py-0.5 rounded text-xs font-medium bg-purple-100 text-purple-800">
+                          <span className="inline-flex items-center px-2 py-0.5 rounded text-xs font-medium bg-purple-100 text-purple-800 dark:bg-purple-900 dark:text-purple-200">
                             Admin
                           </span>
                         ) : (
-                          <span className="inline-flex items-center px-2 py-0.5 rounded text-xs font-medium bg-blue-100 text-blue-800">
+                          <span className="inline-flex items-center px-2 py-0.5 rounded text-xs font-medium bg-blue-100 text-blue-800 dark:bg-blue-900 dark:text-blue-200">
                             Employee
                           </span>
                         )}
@@ -423,13 +423,13 @@ const UserManagement = () => {
                             {user.permissions.slice(0, 2).map((permission) => (
                               <span 
                                 key={permission}
-                                className="inline-flex items-center px-2 py-0.5 rounded text-xs font-medium bg-gray-100 text-gray-800"
+                                className="inline-flex items-center px-2 py-0.5 rounded text-xs font-medium bg-gray-100 text-gray-800 dark:bg-gray-800 dark:text-gray-200"
                               >
                                 {permission.split(':')[1]}
                               </span>
                             ))}
                             {user.permissions.length > 2 && (
-                              <span className="inline-flex items-center px-2 py-0.5 rounded text-xs font-medium bg-gray-100 text-gray-800">
+                              <span className="inline-flex items-center px-2 py-0.5 rounded text-xs font-medium bg-gray-100 text-gray-800 dark:bg-gray-800 dark:text-gray-200">
                                 +{user.permissions.length - 2}
                               </span>
                             )}
@@ -444,6 +444,7 @@ const UserManagement = () => {
                             variant="outline"
                             size="sm"
                             onClick={() => handleEditPermissions(user)}
+                            className="border-2 hover:bg-primary/10"
                           >
                             <Edit className="h-4 w-4" />
                           </Button>
@@ -452,6 +453,7 @@ const UserManagement = () => {
                               variant="outline"
                               size="sm"
                               onClick={() => handlePromoteToAdmin(user.id)}
+                              className="border-2 hover:bg-primary/10"
                             >
                               <Shield className="h-4 w-4" />
                             </Button>
@@ -460,6 +462,7 @@ const UserManagement = () => {
                               variant="outline"
                               size="sm"
                               onClick={() => handleDemoteFromAdmin(user.id)}
+                              className="border-2 hover:bg-primary/10"
                             >
                               <ShieldOff className="h-4 w-4" />
                             </Button>
@@ -484,7 +487,7 @@ const UserManagement = () => {
 
       {/* Edit Permissions Dialog */}
       <Dialog open={isEditingPermissions} onOpenChange={setIsEditingPermissions}>
-        <DialogContent>
+        <DialogContent className="border-2 border-primary/20 bg-card/80 backdrop-blur-sm">
           <DialogHeader>
             <DialogTitle>Edit User Permissions</DialogTitle>
             <DialogDescription>
@@ -533,7 +536,7 @@ const UserManagement = () => {
               
               <div className="flex justify-end space-x-2">
                 <DialogClose asChild>
-                  <Button type="button" variant="outline">Cancel</Button>
+                  <Button type="button" variant="outline" className="border-2">Cancel</Button>
                 </DialogClose>
                 <Button type="submit">Save Changes</Button>
               </div>
@@ -546,4 +549,3 @@ const UserManagement = () => {
 };
 
 export default UserManagement;
-
