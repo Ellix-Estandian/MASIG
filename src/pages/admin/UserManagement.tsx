@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect } from "react";
 import DashboardLayout from "@/components/layouts/DashboardLayout";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
@@ -77,41 +76,6 @@ const UserManagement = () => {
     fetchUsers();
   }, []);
 
-  const fetchUserEmails = async (userIds: string[]) => {
-    if (userIds.length === 0) return {};
-    
-    try {
-      // Use a different approach to fetch user data
-      // Using auth.users is causing typing errors, so we'll use a different approach
-      const { data: userData, error } = await supabase.auth.admin.listUsers();
-      
-      if (error) {
-        console.error('Error fetching users:', error);
-        return {};
-      }
-      
-      // Create a map of user IDs to their email addresses
-      const userEmailMap: Record<string, {email: string, firstName?: string, lastName?: string}> = {};
-      
-      if (userData?.users) {
-        userData.users.forEach(user => {
-          if (userIds.includes(user.id)) {
-            userEmailMap[user.id] = {
-              email: user.email || `user-${user.id.substring(0, 8)}`,
-              firstName: user.user_metadata?.first_name || "",
-              lastName: user.user_metadata?.last_name || "",
-            };
-          }
-        });
-      }
-      
-      return userEmailMap;
-    } catch (error) {
-      console.error('Error in fetchUserEmails:', error);
-      return {};
-    }
-  };
-
   const fetchUsers = async () => {
     try {
       setLoading(true);
@@ -169,20 +133,25 @@ const UserManagement = () => {
         };
       });
       
-      // Try to get user profile info
+      // Get user profile info directly from auth.users using admin API
       try {
-        const userIds = fetchedUsers.map(user => user.id);
-        const userEmailMap = await fetchUserEmails(userIds);
+        // Fetch users' emails and names from auth admin API
+        const { data } = await supabase.auth.admin.listUsers();
         
-        // Update user objects with email and name information
-        fetchedUsers.forEach(user => {
-          const userData = userEmailMap[user.id];
-          if (userData) {
-            user.email = userData.email || user.email;
-            user.firstName = userData.firstName || "";
-            user.lastName = userData.lastName || "";
-          }
-        });
+        if (data && data.users) {
+          // Map auth users to their details
+          const authUsers = data.users;
+          
+          // Update user objects with email and name information
+          fetchedUsers.forEach(user => {
+            const authUserData = authUsers.find(authUser => authUser.id === user.id);
+            if (authUserData) {
+              user.email = authUserData.email || user.email;
+              user.firstName = authUserData.user_metadata?.first_name || "";
+              user.lastName = authUserData.user_metadata?.last_name || "";
+            }
+          });
+        }
       } catch (err) {
         console.error('Error fetching user profiles:', err);
         // Continue without profile data

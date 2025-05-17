@@ -9,6 +9,26 @@ interface AuthLayoutProps {
 }
 
 const AuthLayout: React.FC<AuthLayoutProps> = ({ children, title, subtitle }) => {
+  // Force light theme for auth pages
+  React.useEffect(() => {
+    // Store the original theme
+    const originalTheme = document.documentElement.classList.contains('dark') ? 'dark' : 'light';
+    
+    // Force light mode
+    document.documentElement.classList.remove('dark');
+    document.documentElement.classList.add('light');
+    
+    return () => {
+      // Restore original theme when component unmounts
+      document.documentElement.classList.remove('light', 'dark');
+      if (originalTheme === 'dark') {
+        document.documentElement.classList.add('dark');
+      } else {
+        document.documentElement.classList.add('light');
+      }
+    };
+  }, []);
+
   return (
     <div className="min-h-screen bg-gray-50 flex flex-col justify-center py-12 sm:px-6 lg:px-8">
       <div className="sm:mx-auto sm:w-full sm:max-w-md">
