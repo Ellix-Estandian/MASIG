@@ -79,81 +79,74 @@ const UserManagement = () => {
     try {
       setLoading(true);
       
-      // Use the auth.users view to get all users
-      const { data: usersData, error: usersError } = await supabase
-        .from('auth.users')
-        .select('id, email, raw_user_meta_data');
+      // Get all user IDs from the user_roles table
+      const { data: userRolesData, error: userRolesError } = await supabase
+        .from('user_roles')
+        .select('user_id, role');
       
-      if (usersError) {
-        console.error('Error fetching users from auth.users:', usersError);
-        
-        // Fallback to get users from user_roles table
-        const { data: rolesData, error: rolesError } = await supabase
-          .from('user_roles')
-          .select('user_id');
-        
-        if (rolesError) {
-          throw rolesError;
-        }
-        
-        // Create a map of unique user IDs
-        const userIds = [...new Set(rolesData.map(role => role.user_id))];
-        
-        // For each user ID, fetch their roles and permissions
-        const fetchedUsers: User[] = [];
-        
-        for (const userId of userIds) {
-          // Get roles for this user
-          const { data: userRoles } = await supabase
-            .from('user_roles')
-            .select('role')
-            .eq('user_id', userId);
-          
-          // Get permissions for this user
-          const { data: userPermissions } = await supabase
-            .from('user_permissions')
-            .select('permission')
-            .eq('user_id', userId);
-          
-          fetchedUsers.push({
-            id: userId,
-            email: `user-${userId.substring(0, 8)}`, // Use partial ID as placeholder
-            firstName: "",
-            lastName: "",
-            roles: userRoles?.map(r => r.role as Role) || [],
-            permissions: userPermissions?.map(p => p.permission) || []
-          });
-        }
-        
-        setUsers(fetchedUsers);
+      if (userRolesError) {
+        throw userRolesError;
+      }
+      
+      if (!userRolesData || userRolesData.length === 0) {
+        setUsers([]);
         setLoading(false);
         return;
       }
       
-      // Successfully got users from auth.users
-      const fetchedUsers: User[] = [];
+      // Create a map of user IDs to roles
+      const userRoleMap = new Map<string, Role[]>();
       
-      for (const user of usersData) {
-        // Get roles for this user
-        const { data: roles } = await supabase
-          .from('user_roles')
-          .select('role')
-          .eq('user_id', user.id);
-        
-        // Get permissions for this user
-        const { data: permissions } = await supabase
+      userRolesData.forEach(row => {
+        if (!userRoleMap.has(row.user_id)) {
+          userRoleMap.set(row.user_id, [row.role as Role]);
+        } else {
+          userRoleMap.get(row.user_id)?.push(row.role as Role);
+        }
+      });
+      
+      // Get permissions for each user
+      const userPermissionMap = new Map<string, string[]>();
+      
+      for (const userId of userRoleMap.keys()) {
+        const { data: permissionsData } = await supabase
           .from('user_permissions')
           .select('permission')
-          .eq('user_id', user.id);
+          .eq('user_id', userId);
         
-        fetchedUsers.push({
-          id: user.id,
-          email: user.email || '',
-          firstName: user.raw_user_meta_data?.firstName || '',
-          lastName: user.raw_user_meta_data?.lastName || '',
-          roles: roles?.map(r => r.role as Role) || [],
-          permissions: permissions?.map(p => p.permission) || []
-        });
+        userPermissionMap.set(
+          userId, 
+          permissionsData?.map(p => p.permission) || []
+        );
+      }
+      
+      // Create user objects from the data
+      const fetchedUsers: User[] = Array.from(userRoleMap.keys()).map(userId => {
+        return {
+          id: userId,
+          email: `user-${userId.substring(0, 8)}`, // Default placeholder
+          firstName: "",
+          lastName: "",
+          roles: userRoleMap.get(userId) || [],
+          permissions: userPermissionMap.get(userId) || []
+        };
+      });
+      
+      // Try to get user profile info using RPC function if available
+      try {
+        for (let i = 0; i < fetchedUsers.length; i++) {
+          const userId = fetchedUsers[i].id;
+          const { data: userData } = await supabase.rpc('get_user_profile', { user_id_param: userId });
+          
+          if (userData && userData.length > 0) {
+            fetchedUsers[i].email = userData[0].email || fetchedUsers[i].email;
+            fetchedUsers[i].firstName = userData[0].first_name || "";
+            fetchedUsers[i].lastName = userData[0].last_name || "";
+          }
+        }
+      } catch (err) {
+        console.error('Error fetching user profiles:', err);
+        // Continue without profile data
       }
       
       setUsers(fetchedUsers);
@@ -553,3 +546,4 @@ const UserManagement = () => {
 };
 
 export default UserManagement;
+
