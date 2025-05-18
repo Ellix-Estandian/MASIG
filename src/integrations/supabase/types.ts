@@ -297,7 +297,15 @@ export type Database = {
           permission?: string
           user_id?: string
         }
-        Relationships: []
+        Relationships: [
+          {
+            foreignKeyName: "user_permissions_user_id_fkey"
+            columns: ["user_id"]
+            isOneToOne: false
+            referencedRelation: "auth_users_view"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       user_roles: {
         Row: {
@@ -318,10 +326,36 @@ export type Database = {
           role?: Database["public"]["Enums"]["app_role"]
           user_id?: string
         }
-        Relationships: []
+        Relationships: [
+          {
+            foreignKeyName: "user_roles_user_id_fkey"
+            columns: ["user_id"]
+            isOneToOne: false
+            referencedRelation: "auth_users_view"
+            referencedColumns: ["id"]
+          },
+        ]
       }
     }
     Views: {
+      auth_users_view: {
+        Row: {
+          email: string | null
+          id: string | null
+          user_metadata: Json | null
+        }
+        Insert: {
+          email?: string | null
+          id?: string | null
+          user_metadata?: Json | null
+        }
+        Update: {
+          email?: string | null
+          id?: string | null
+          user_metadata?: Json | null
+        }
+        Relationships: []
+      }
       safe_user_roles: {
         Row: {
           created_at: string | null
@@ -341,7 +375,15 @@ export type Database = {
           role?: Database["public"]["Enums"]["app_role"] | null
           user_id?: string | null
         }
-        Relationships: []
+        Relationships: [
+          {
+            foreignKeyName: "user_roles_user_id_fkey"
+            columns: ["user_id"]
+            isOneToOne: false
+            referencedRelation: "auth_users_view"
+            referencedColumns: ["id"]
+          },
+        ]
       }
     }
     Functions: {

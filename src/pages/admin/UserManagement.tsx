@@ -6,7 +6,7 @@ import { useToast } from "@/components/ui/use-toast";
 import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { Search, Edit, Trash2, Shield, ShieldOff } from "lucide-react";
+import { Search, Edit, Trash2, Shield, ShieldOff, Mail, User } from "lucide-react";
 import {
   Table,
   TableBody,
@@ -37,6 +37,7 @@ import { useForm } from "react-hook-form";
 import { z } from "zod";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { toast as sonnerToast } from "sonner";
+import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 
 interface User {
   id: string;
@@ -47,12 +48,13 @@ interface User {
   permissions: string[];
 }
 
-interface AuthUser {
+// Interface representing the data structure returned from auth_users_view
+interface AuthUserView {
   id: string;
-  email: string | null;
+  email: string;
   user_metadata: {
-    first_name?: string;
-    last_name?: string;
+    firstName?: string;
+    lastName?: string;
   };
 }
 
@@ -137,24 +139,22 @@ const UserManagement = () => {
         };
       });
       
-      // Get user profile info directly from auth.users using admin API
       try {
-        // Fetch users directly from the database since we can't use admin API
-        const { data } = await supabase
-          .from('auth_users_view') // Using a view that gives access to user info
+        // Fetch users from our newly created auth_users_view
+        const { data: authUsersData, error: authUsersError } = await supabase
+          .from('auth_users_view')
           .select('id, email, user_metadata');
         
-        if (data && data.length > 0) {
-          // Map users to their details
-          const authUsers = data;
-          
+        if (authUsersError) throw authUsersError;
+        
+        if (authUsersData && authUsersData.length > 0) {
           // Update user objects with email and name information
           fetchedUsers.forEach(user => {
-            const authUserData = authUsers.find(authUser => authUser.id === user.id);
+            const authUserData = authUsersData.find(authUser => authUser.id === user.id);
             if (authUserData) {
               user.email = authUserData.email || user.email;
-              user.firstName = authUserData.user_metadata?.first_name || "";
-              user.lastName = authUserData.user_metadata?.last_name || "";
+              user.firstName = authUserData.user_metadata?.firstName || "";
+              user.lastName = authUserData.user_metadata?.lastName || "";
             }
           });
         }
@@ -362,6 +362,30 @@ const UserManagement = () => {
     }
   });
 
+  // Helper function to get user initials for avatar
+  const getUserInitials = (user: User) => {
+    if (user.firstName && user.lastName) {
+      return `${user.firstName.charAt(0)}${user.lastName.charAt(0)}`.toUpperCase();
+    } else if (user.firstName) {
+      return user.firstName.charAt(0).toUpperCase();
+    } else if (user.email) {
+      return user.email.charAt(0).toUpperCase();
+    }
+    return "U";
+  };
+
+  // Helper function to get avatar color based on user id
+  const getAvatarColor = (userId: string) => {
+    const colors = [
+      "bg-red-500", "bg-blue-500", "bg-green-500", "bg-yellow-500", 
+      "bg-purple-500", "bg-pink-500", "bg-indigo-500", "bg-orange-500"
+    ];
+    
+    // Simple hash function to pick a color based on user id
+    const index = userId.split('').reduce((acc, char) => acc + char.charCodeAt(0), 0) % colors.length;
+    return colors[index];
+  };
+
   const filteredUsers = users.filter(user =>
     user.email.toLowerCase().includes(searchTerm.toLowerCase()) ||
     `${user.firstName} ${user.lastName}`.toLowerCase().includes(searchTerm.toLowerCase())
@@ -396,7 +420,7 @@ const UserManagement = () => {
               <TableCaption>List of all users in the system</TableCaption>
               <TableHeader>
                 <TableRow className="bg-muted/50">
-                  <TableHead className="font-medium">Name</TableHead>
+                  <TableHead className="font-medium">User</TableHead>
                   <TableHead className="font-medium">Email</TableHead>
                   <TableHead className="font-medium">Role</TableHead>
                   <TableHead className="font-medium">Permissions</TableHead>
@@ -419,22 +443,46 @@ const UserManagement = () => {
                 ) : (
                   filteredUsers.map((user) => (
                     <TableRow key={user.id} className="hover:bg-muted/50 transition-colors">
-                      <TableCell className="font-medium">
-                        {user.firstName || user.lastName ? 
-                          `${user.firstName || ''} ${user.lastName || ''}`.trim() : 
-                          'No name provided'}
-                      </TableCell>
-                      <TableCell>{user.email}</TableCell>
                       <TableCell>
-                        {user.roles.includes('admin') ? (
-                          <span className="inline-flex items-center px-2 py-0.5 rounded text-xs font-medium bg-purple-100 text-purple-800 dark:bg-purple-900 dark:text-purple-200">
-                            Admin
-                          </span>
-                        ) : (
-                          <span className="inline-flex items-center px-2 py-0.5 rounded text-xs font-medium bg-blue-100 text-blue-800 dark:bg-blue-900 dark:text-blue-200">
-                            Employee
-                          </span>
-                        )}
+                        <div className="flex items-center space-x-3">
+                          <Avatar>
+                            <AvatarFallback className={getAvatarColor(user.id)}>
+                              {getUserInitials(user)}
+                            </AvatarFallback>
+                          </Avatar>
+                          <div>
+                            <p className="font-medium">
+                              {user.firstName || user.lastName ? 
+                                `${user.firstName || ''} ${user.lastName || ''}`.trim() : 
+                                'No name provided'}
+                            </p>
+                            <p className="text-xs text-muted-foreground">
+                              ID: {user.id.substring(0, 8)}...
+                            </p>
+                          </div>
+                        </div>
+                      </TableCell>
+                      <TableCell>
+                        <div className="flex items-center gap-2">
+                          <Mail className="h-4 w-4 text-muted-foreground" />
+                          <span>{user.email}</span>
+                        </div>
+                      </TableCell>
+                      <TableCell>
+                        <div className="flex flex-wrap gap-1">
+                          {user.roles.map(role => (
+                            <span 
+                              key={role} 
+                              className={`inline-flex items-center px-2 py-1 rounded text-xs font-medium ${
+                                role === 'admin' 
+                                  ? 'bg-purple-100 text-purple-800 dark:bg-purple-900 dark:text-purple-200' 
+                                  : 'bg-blue-100 text-blue-800 dark:bg-blue-900 dark:text-blue-200'
+                              }`}
+                            >
+                              {role.charAt(0).toUpperCase() + role.slice(1)}
+                            </span>
+                          ))}
+                        </div>
                       </TableCell>
                       <TableCell>
                         {user.permissions.length > 0 ? (
@@ -442,13 +490,13 @@ const UserManagement = () => {
                             {user.permissions.slice(0, 2).map((permission) => (
                               <span 
                                 key={permission}
-                                className="inline-flex items-center px-2 py-0.5 rounded text-xs font-medium bg-gray-100 text-gray-800 dark:bg-gray-800 dark:text-gray-200"
+                                className="inline-flex items-center px-2 py-1 rounded text-xs font-medium bg-gray-100 text-gray-800 dark:bg-gray-800 dark:text-gray-200"
                               >
-                                {permission.split(':')[1]}
+                                {permission.split(':')[0]}: {permission.split(':')[1]}
                               </span>
                             ))}
                             {user.permissions.length > 2 && (
-                              <span className="inline-flex items-center px-2 py-0.5 rounded text-xs font-medium bg-gray-100 text-gray-800 dark:bg-gray-800 dark:text-gray-200">
+                              <span className="inline-flex items-center px-2 py-1 rounded text-xs font-medium bg-gray-100 text-gray-800 dark:bg-gray-800 dark:text-gray-200">
                                 +{user.permissions.length - 2}
                               </span>
                             )}
@@ -512,7 +560,7 @@ const UserManagement = () => {
             <DialogDescription>
               {editingUser && (
                 <>
-                  Update permissions for {editingUser.firstName} {editingUser.lastName} ({editingUser.email})
+                  Update permissions for {editingUser.firstName || ""} {editingUser.lastName || ""} ({editingUser.email})
                 </>
               )}
             </DialogDescription>
