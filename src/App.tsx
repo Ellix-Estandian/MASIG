@@ -45,9 +45,9 @@ const App = () => (
             </ProtectedRoute>
           } />
           <Route path="/reports" element={
-            <ProtectedRoute requiredPermission="view:reports">
+            <AdminRoute>
               <Reports />
-            </ProtectedRoute>
+            </AdminRoute>
           } />
           <Route path="/settings" element={
             <ProtectedRoute>

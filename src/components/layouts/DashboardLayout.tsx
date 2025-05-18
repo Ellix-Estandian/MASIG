@@ -1,3 +1,4 @@
+
 import React, { useState } from "react";
 import { Link, useLocation } from "react-router-dom";
 import { 
@@ -22,7 +23,6 @@ import {
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
-import { Toggle } from "@/components/ui/toggle";
 
 interface DashboardLayoutProps {
   children: React.ReactNode;
@@ -34,7 +34,7 @@ const DashboardLayout: React.FC<DashboardLayoutProps> = ({ children }) => {
   const { isAdmin } = useUserRoles();
   const location = useLocation();
   
-  // Navigation items
+  // Navigation items - Reports tab only for admins
   const navItems = [
     {
       name: "Dashboard",
@@ -46,11 +46,14 @@ const DashboardLayout: React.FC<DashboardLayoutProps> = ({ children }) => {
       href: "/products",
       icon: Package,
     },
-    {
-      name: "Reports",
-      href: "/reports",
-      icon: FileText,
-    }
+    // Only include Reports for admin users
+    ...(isAdmin ? [
+      {
+        name: "Reports",
+        href: "/reports",
+        icon: FileText,
+      }
+    ] : [])
   ];
   
   // Admin only nav items

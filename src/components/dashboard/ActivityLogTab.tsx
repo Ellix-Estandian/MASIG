@@ -14,15 +14,14 @@ import {
   Pencil, 
   Trash2, 
   Clock, 
-  User, 
-  Package 
+  User 
 } from "lucide-react";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Badge } from "@/components/ui/badge";
 import { cn } from "@/lib/utils";
 
 // Mock data for the activity log
-// In a real application, you would fetch this from your API
+// In a real application, this would be fetched from the database
 const activityData = [
   {
     id: 1,
