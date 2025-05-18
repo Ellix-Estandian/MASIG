@@ -1,3 +1,4 @@
+
 import React, { useState, useEffect } from "react";
 import DashboardLayout from "@/components/layouts/DashboardLayout";
 import ProductSearch from "@/components/ProductSearch";
@@ -227,7 +228,7 @@ const Products = () => {
         </Card>
       </div>
       
-      {/* Product Details Modal */}
+      {/* Product Details Modal - Updated footer with improved button layout */}
       {selectedProductDetails && (
         <Dialog open={productDetailsOpen} onOpenChange={setProductDetailsOpen}>
           <DialogContent>
@@ -261,30 +262,33 @@ const Products = () => {
               </div>
             </div>
             
-            <DialogFooter className="flex flex-col sm:flex-row gap-2">
+            <DialogFooter className="flex flex-col sm:flex-row sm:justify-between gap-2 mt-4">
               <Button 
                 variant="outline" 
                 onClick={() => handleViewHistory(selectedProductDetails.prodcode)}
-                className="w-full sm:w-auto"
+                className="w-full sm:w-auto order-3 sm:order-1"
               >
                 View Price History
               </Button>
-              <Button 
-                variant="outline" 
-                onClick={() => handleEditClick(selectedProductDetails)}
-                className="w-full sm:w-auto"
-              >
-                <Edit className="h-4 w-4 mr-2" />
-                Edit Product
-              </Button>
-              <Button 
-                variant="destructive" 
-                onClick={() => handleDeleteClick(selectedProductDetails.prodcode)}
-                className="w-full sm:w-auto"
-              >
-                <Trash2 className="h-4 w-4 mr-2" />
-                Delete Product
-              </Button>
+              
+              <div className="flex flex-col sm:flex-row gap-2 w-full sm:w-auto order-1 sm:order-2">
+                <Button 
+                  variant="outline" 
+                  onClick={() => handleEditClick(selectedProductDetails)}
+                  className="w-full sm:w-auto"
+                >
+                  <Edit className="h-4 w-4 mr-2" />
+                  Edit Product
+                </Button>
+                <Button 
+                  variant="destructive" 
+                  onClick={() => handleDeleteClick(selectedProductDetails.prodcode)}
+                  className="w-full sm:w-auto"
+                >
+                  <Trash2 className="h-4 w-4 mr-2" />
+                  Delete Product
+                </Button>
+              </div>
             </DialogFooter>
           </DialogContent>
         </Dialog>

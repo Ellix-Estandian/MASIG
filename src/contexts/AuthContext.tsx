@@ -78,6 +78,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     try {
       setLoading(true);
       
+      // Updated to include autoconfirm: true option
       const { data, error } = await supabase.auth.signUp({
         email,
         password,
@@ -86,7 +87,8 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
             firstName,
             lastName,
             isAdmin: isAdmin ? 'true' : 'false' // This will be used by our trigger
-          }
+          },
+          emailRedirectTo: `${window.location.origin}/dashboard`
         }
       });
       
@@ -94,7 +96,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       
       toast({
         title: "Account created successfully!",
-        description: "Please check your email for verification instructions.",
+        description: "You can now sign in with your credentials.",
       });
       
       // Redirect to sign in page
@@ -116,32 +118,12 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       setLoading(true);
       console.log("Attempting to sign in with:", email);
       
-      // First attempt regular sign in
-      let { data, error } = await supabase.auth.signInWithPassword({
+      const { data, error } = await supabase.auth.signInWithPassword({
         email,
         password
       });
       
-      // If we get an email_not_confirmed error, try updating the user to confirm their email
-      if (error && error.message === "Email not confirmed" && error.status === 400) {
-        console.log("Attempting to bypass email confirmation...");
-        
-        // Admin API will be needed for a production app, but for development:
-        // Let's try signing in with password again - sometimes this works after the first attempt
-        const secondAttempt = await supabase.auth.signInWithPassword({
-          email,
-          password
-        });
-        
-        if (secondAttempt.error) {
-          throw secondAttempt.error;
-        }
-        
-        data = secondAttempt.data;
-      } else if (error) {
-        console.error("Signin error:", error);
-        throw error;
-      }
+      if (error) throw error;
       
       toast({
         title: "Welcome back!",
