@@ -55,7 +55,7 @@ interface AuthUserView {
   user_metadata: {
     firstName?: string;
     lastName?: string;
-  };
+  } | null;
 }
 
 const permissionsList = [
@@ -150,11 +150,18 @@ const UserManagement = () => {
         if (authUsersData && authUsersData.length > 0) {
           // Update user objects with email and name information
           fetchedUsers.forEach(user => {
-            const authUserData = authUsersData.find(authUser => authUser.id === user.id);
+            const authUserData = authUsersData.find(authUser => authUser.id === user.id) as AuthUserView | undefined;
             if (authUserData) {
               user.email = authUserData.email || user.email;
-              user.firstName = authUserData.user_metadata?.firstName || "";
-              user.lastName = authUserData.user_metadata?.lastName || "";
+              
+              // Safely access metadata properties with type checking
+              if (authUserData.user_metadata && 
+                  typeof authUserData.user_metadata === 'object' && 
+                  authUserData.user_metadata !== null) {
+                const metadata = authUserData.user_metadata as Record<string, unknown>;
+                user.firstName = typeof metadata.firstName === 'string' ? metadata.firstName : '';
+                user.lastName = typeof metadata.lastName === 'string' ? metadata.lastName : '';
+              }
             }
           });
         }
