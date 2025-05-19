@@ -15,6 +15,7 @@ import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
 import { useAuth } from "@/contexts/AuthContext";
 import { useUserRoles } from "@/hooks/useUserRoles";
+import Footer from "@/components/Footer";
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -66,7 +67,7 @@ const DashboardLayout: React.FC<DashboardLayoutProps> = ({ children }) => {
   ] : [];
 
   return (
-    <div className="min-h-screen bg-background">
+    <div className="min-h-screen bg-background flex flex-col">
       {/* Mobile sidebar */}
       <div className={cn(
         "fixed inset-0 bg-black/50 backdrop-blur-sm z-40 md:hidden",
@@ -87,7 +88,7 @@ const DashboardLayout: React.FC<DashboardLayoutProps> = ({ children }) => {
               <div className="w-8 h-8 bg-primary rounded-md flex items-center justify-center">
                 <Package className="text-primary-foreground h-5 w-5" />
               </div>
-              <span className="text-lg font-semibold">MASIG Products</span>
+              <span className="text-lg font-semibold">MASIG</span>
             </Link>
           </div>
           
@@ -164,7 +165,7 @@ const DashboardLayout: React.FC<DashboardLayoutProps> = ({ children }) => {
               <div className="w-8 h-8 bg-primary rounded-md flex items-center justify-center">
                 <Package className="text-primary-foreground h-5 w-5" />
               </div>
-              <span className="text-lg font-semibold">MASIG Products</span>
+              <span className="text-lg font-semibold">MASIG</span>
             </Link>
             <button onClick={() => setSidebarOpen(false)}>
               <X className="h-5 w-5 text-muted-foreground" />
@@ -257,6 +258,9 @@ const DashboardLayout: React.FC<DashboardLayoutProps> = ({ children }) => {
           {children}
         </div>
       </main>
+      
+      {/* Added Footer */}
+      <Footer />
     </div>
   );
 };

@@ -4,6 +4,7 @@ import { useNavigate } from "react-router-dom";
 import { useAuth } from "@/contexts/AuthContext";
 import { Button } from "@/components/ui/button";
 import { Package } from "lucide-react";
+import Footer from "@/components/Footer";
 
 const Index = () => {
   const { isAuthenticated, loading } = useAuth();
@@ -25,7 +26,7 @@ const Index = () => {
               <div className="w-10 h-10 bg-white rounded-md flex items-center justify-center">
                 <Package className="text-brand-700 h-6 w-6" />
               </div>
-              <span className="text-xl font-bold">InventoryPro</span>
+              <span className="text-xl font-bold">MASIG</span>
             </div>
             <div className="hidden md:flex space-x-4">
               <Button variant="ghost" className="text-white hover:text-white hover:bg-brand-600">Features</Button>
@@ -126,6 +127,9 @@ const Index = () => {
           </div>
         </div>
       </div>
+      
+      {/* Added Footer */}
+      <Footer />
     </div>
   );
 };

@@ -18,7 +18,7 @@ const Footer = () => {
         <div className="flex flex-col gap-4 md:flex-row md:justify-between">
           <div>
             <p className="text-sm text-muted-foreground">
-              &copy; {currentYear} MASIG Products. All rights reserved.
+              &copy; {currentYear} MASIG. All rights reserved.
             </p>
           </div>
           
