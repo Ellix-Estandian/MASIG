@@ -9,6 +9,47 @@ export type Json =
 export type Database = {
   public: {
     Tables: {
+      activity_logs: {
+        Row: {
+          action_type: string
+          created_at: string
+          details: Json | null
+          id: string
+          product_code: string | null
+          product_name: string | null
+          user_email: string
+          user_id: string
+        }
+        Insert: {
+          action_type: string
+          created_at?: string
+          details?: Json | null
+          id?: string
+          product_code?: string | null
+          product_name?: string | null
+          user_email: string
+          user_id: string
+        }
+        Update: {
+          action_type?: string
+          created_at?: string
+          details?: Json | null
+          id?: string
+          product_code?: string | null
+          product_name?: string | null
+          user_email?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "activity_logs_user_id_fkey"
+            columns: ["user_id"]
+            isOneToOne: false
+            referencedRelation: "auth_users_view"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       customer: {
         Row: {
           address: string | null

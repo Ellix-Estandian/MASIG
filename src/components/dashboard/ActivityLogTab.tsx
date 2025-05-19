@@ -1,5 +1,5 @@
 
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import {
   Table,
   TableBody,
@@ -15,78 +15,92 @@ import {
   Trash2, 
   Clock, 
   AlertCircle,
-  Search
+  Search,
+  Eye
 } from "lucide-react";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Badge } from "@/components/ui/badge";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { Input } from "@/components/ui/input";
+import { supabase } from "@/integrations/supabase/client";
+import { useToast } from "@/components/ui/use-toast";
 
-// Mock data for demonstration purposes - in a real app, this would come from the database
-const activityData = [
-  {
-    id: "1",
-    employeeName: "John Smith",
-    employeeInitials: "JS",
-    employeeAvatar: "",
-    action: "added",
-    productName: "Office Chair Model X",
-    productCode: "CHAIR-001",
-    timestamp: "2024-05-18T10:30:00Z"
-  },
-  {
-    id: "2",
-    employeeName: "Jane Doe",
-    employeeInitials: "JD",
-    employeeAvatar: "",
-    action: "edited",
-    productName: "Desk Lamp Premium",
-    productCode: "LAMP-243",
-    timestamp: "2024-05-17T14:25:00Z"
-  },
-  {
-    id: "3",
-    employeeName: "Admin User",
-    employeeInitials: "AU",
-    employeeAvatar: "",
-    action: "deleted",
-    productName: "Discontinued Keyboard",
-    productCode: "KB-112",
-    timestamp: "2024-05-16T09:15:00Z"
-  },
-  {
-    id: "4",
-    employeeName: "Mike Johnson",
-    employeeInitials: "MJ",
-    employeeAvatar: "",
-    action: "edited",
-    productName: "Ergonomic Mouse",
-    productCode: "MOUSE-87",
-    timestamp: "2024-05-15T16:40:00Z"
-  },
-  {
-    id: "5",
-    employeeName: "Admin User",
-    employeeInitials: "AU",
-    employeeAvatar: "",
-    action: "added",
-    productName: "Standing Desk Converter",
-    productCode: "DESK-321",
-    timestamp: "2024-05-14T11:20:00Z"
-  }
-];
+interface ActivityLog {
+  id: string;
+  user_id: string;
+  user_email: string;
+  action_type: string;
+  product_code: string | null;
+  product_name: string | null;
+  details: any | null;
+  created_at: string;
+}
 
 const ActivityLogTab: React.FC = () => {
   const [searchTerm, setSearchTerm] = useState("");
+  const [activityLogs, setActivityLogs] = useState<ActivityLog[]>([]);
+  const [loading, setLoading] = useState(true);
+  const { toast } = useToast();
 
-  // Filter activity data based on search term
-  const filteredActivityData = activityData.filter((activity) => {
+  // Fetch activity logs from the database
+  useEffect(() => {
+    const fetchActivityLogs = async () => {
+      try {
+        setLoading(true);
+        const { data, error } = await supabase
+          .from("activity_logs")
+          .select("*")
+          .order("created_at", { ascending: false });
+
+        if (error) {
+          throw error;
+        }
+
+        setActivityLogs(data || []);
+      } catch (error: any) {
+        console.error("Error fetching activity logs:", error);
+        toast({
+          variant: "destructive",
+          title: "Error loading activity logs",
+          description: error.message || "Failed to load activity logs",
+        });
+        setActivityLogs([]);
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    fetchActivityLogs();
+
+    // Set up realtime subscription for new logs
+    const channel = supabase
+      .channel("activity_logs_changes")
+      .on(
+        "postgres_changes",
+        {
+          event: "INSERT",
+          schema: "public",
+          table: "activity_logs",
+        },
+        (payload) => {
+          setActivityLogs((prev) => [payload.new as ActivityLog, ...prev]);
+        }
+      )
+      .subscribe();
+
+    return () => {
+      supabase.removeChannel(channel);
+    };
+  }, [toast]);
+
+  // Filter activity logs based on search term
+  const filteredActivityLogs = activityLogs.filter((activity) => {
     const searchLower = searchTerm.toLowerCase();
     return (
-      activity.employeeName.toLowerCase().includes(searchLower) ||
-      activity.productName.toLowerCase().includes(searchLower) ||
-      activity.productCode.toLowerCase().includes(searchLower) ||
-      activity.action.toLowerCase().includes(searchLower)
+      activity.user_email.toLowerCase().includes(searchLower) ||
+      (activity.product_name?.toLowerCase().includes(searchLower) || false) ||
+      (activity.product_code?.toLowerCase().includes(searchLower) || false) ||
+      activity.action_type.toLowerCase().includes(searchLower)
     );
   });
 
@@ -98,6 +112,8 @@ const ActivityLogTab: React.FC = () => {
         return <Pencil className="h-4 w-4 text-blue-500" />;
       case "deleted":
         return <Trash2 className="h-4 w-4 text-red-500" />;
+      case "viewed":
+        return <Eye className="h-4 w-4 text-amber-500" />;
       default:
         return null;
     }
@@ -123,8 +139,18 @@ const ActivityLogTab: React.FC = () => {
             Deleted
           </Badge>
         );
+      case "viewed":
+        return (
+          <Badge variant="outline" className="bg-amber-500/10 text-amber-600 border-amber-200">
+            Viewed
+          </Badge>
+        );
       default:
-        return null;
+        return (
+          <Badge variant="outline" className="bg-gray-500/10 text-gray-600 border-gray-200">
+            {action}
+          </Badge>
+        );
     }
   };
 
@@ -136,6 +162,12 @@ const ActivityLogTab: React.FC = () => {
       hour: '2-digit',
       minute: '2-digit'
     }).format(date);
+  };
+
+  const getInitials = (email: string) => {
+    // Extract first letter of each word in email before @
+    const name = email.split('@')[0];
+    return name.split('.').map(part => part[0]?.toUpperCase() || '').join('');
   };
 
   return (
@@ -152,7 +184,11 @@ const ActivityLogTab: React.FC = () => {
           />
         </div>
         
-        {filteredActivityData.length === 0 ? (
+        {loading ? (
+          <div className="h-[400px] flex items-center justify-center">
+            <div className="animate-spin rounded-full h-10 w-10 border-b-2 border-primary"></div>
+          </div>
+        ) : filteredActivityLogs.length === 0 ? (
           <Alert className="bg-muted/50 border border-muted">
             <AlertCircle className="h-4 w-4" />
             <AlertTitle>No matching activity logs found</AlertTitle>
@@ -167,40 +203,44 @@ const ActivityLogTab: React.FC = () => {
             <Table>
               <TableHeader>
                 <TableRow className="bg-muted/50">
-                  <TableHead>Employee</TableHead>
+                  <TableHead>User</TableHead>
                   <TableHead>Action</TableHead>
                   <TableHead>Product</TableHead>
                   <TableHead>Time</TableHead>
                 </TableRow>
               </TableHeader>
               <TableBody>
-                {filteredActivityData.map((activity) => (
+                {filteredActivityLogs.map((activity) => (
                   <TableRow key={activity.id} className="hover:bg-muted/40 transition-colors">
                     <TableCell>
                       <div className="flex items-center gap-3">
                         <Avatar className="h-8 w-8">
-                          <AvatarImage src={activity.employeeAvatar} alt={activity.employeeName} />
-                          <AvatarFallback className="text-xs">{activity.employeeInitials}</AvatarFallback>
+                          <AvatarImage src="" alt={activity.user_email} />
+                          <AvatarFallback className="text-xs">{getInitials(activity.user_email)}</AvatarFallback>
                         </Avatar>
-                        <div className="font-medium">{activity.employeeName}</div>
+                        <div className="font-medium">{activity.user_email}</div>
                       </div>
                     </TableCell>
                     <TableCell>
                       <div className="flex items-center gap-2">
-                        {getActionIcon(activity.action)}
-                        {getActionBadge(activity.action)}
+                        {getActionIcon(activity.action_type)}
+                        {getActionBadge(activity.action_type)}
                       </div>
                     </TableCell>
                     <TableCell>
-                      <div className="flex flex-col">
-                        <span className="font-medium">{activity.productName}</span>
-                        <span className="text-xs text-muted-foreground">{activity.productCode}</span>
-                      </div>
+                      {activity.product_name || activity.product_code ? (
+                        <div className="flex flex-col">
+                          <span className="font-medium">{activity.product_name || "Unknown Product"}</span>
+                          <span className="text-xs text-muted-foreground">{activity.product_code || ""}</span>
+                        </div>
+                      ) : (
+                        <span className="text-muted-foreground">N/A</span>
+                      )}
                     </TableCell>
                     <TableCell>
                       <div className="flex items-center gap-2 text-muted-foreground">
                         <Clock className="h-3 w-3" />
-                        <span className="text-sm">{formatDate(activity.timestamp)}</span>
+                        <span className="text-sm">{formatDate(activity.created_at)}</span>
                       </div>
                     </TableCell>
                   </TableRow>

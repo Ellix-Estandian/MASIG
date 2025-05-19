@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect } from "react";
 import DashboardLayout from "@/components/layouts/DashboardLayout";
 import ProductSearch from "@/components/ProductSearch";
@@ -46,6 +45,8 @@ import {
   DialogTitle,
 } from "@/components/ui/dialog";
 import { Edit, Trash2 } from "lucide-react";
+import { useActivityLog } from "@/hooks/useActivityLog";
+import Footer from "@/components/Footer";
 
 const Products = () => {
   const [searchTerm, setSearchTerm] = useState("");
@@ -69,6 +70,7 @@ const Products = () => {
     fetchPriceHistory 
   } = usePriceHistory();
   const { toast } = useToast();
+  const { logActivity } = useActivityLog();
 
   useEffect(() => {
     if (searchTerm.trim() === "") {
@@ -83,9 +85,16 @@ const Products = () => {
     }
   }, [searchTerm, products]);
 
-  const handleProductClick = (product: Product) => {
+  const handleProductClick = async (product: Product) => {
     setSelectedProductDetails(product);
     setProductDetailsOpen(true);
+    
+    // Log that a product was viewed
+    await logActivity({
+      action: "viewed",
+      productCode: product.prodcode,
+      productName: product.description,
+    });
   };
 
   const handleViewHistory = async (productCode: string) => {
@@ -121,6 +130,9 @@ const Products = () => {
     if (!productToDelete) return;
     
     try {
+      // Find the product being deleted to log details
+      const productToLog = products.find(p => p.prodcode === productToDelete);
+      
       // First delete price history records associated with this product
       const { error: priceHistError } = await supabase
         .from('pricehist')
@@ -136,6 +148,19 @@ const Products = () => {
         .eq('prodcode', productToDelete);
       
       if (productError) throw productError;
+      
+      // Log the deletion activity
+      if (productToLog) {
+        await logActivity({
+          action: "deleted",
+          productCode: productToLog.prodcode,
+          productName: productToLog.description,
+          details: {
+            lastPrice: productToLog.current_price,
+            unit: productToLog.unit
+          }
+        });
+      }
       
       toast({
         title: "Product deleted",
@@ -159,77 +184,83 @@ const Products = () => {
 
   return (
     <DashboardLayout>
-      <div className="space-y-6">
-        <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 mb-6">
-          <h1 className="text-2xl font-bold">Products</h1>
-          <div className="flex items-center gap-3 w-full sm:w-auto">
-            <ProductSearch 
-              searchTerm={searchTerm}
-              setSearchTerm={setSearchTerm}
-              className="flex-1 sm:w-64"
-            />
-            <Button onClick={() => setAddProductOpen(true)}>
-              <Plus className="h-4 w-4 mr-2" />
-              Add Product
-            </Button>
+      <div className="flex flex-col min-h-[calc(100vh-4rem)]">
+        <div className="flex-grow space-y-6">
+          <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 mb-6">
+            <h1 className="text-2xl font-bold">Products</h1>
+            <div className="flex items-center gap-3 w-full sm:w-auto">
+              <ProductSearch 
+                searchTerm={searchTerm}
+                setSearchTerm={setSearchTerm}
+                className="flex-1 sm:w-64"
+              />
+              <Button onClick={() => setAddProductOpen(true)}>
+                <Plus className="h-4 w-4 mr-2" />
+                Add Product
+              </Button>
+            </div>
           </div>
+          
+          <Card>
+            <CardHeader>
+              <CardTitle>Product List</CardTitle>
+              <CardDescription>
+                View and manage all your products
+              </CardDescription>
+            </CardHeader>
+            <CardContent>
+              {
+                loading ? (
+                <div className="w-full py-8 text-center">
+                  <div className="inline-block animate-spin rounded-full h-8 w-8 border-b-2 border-gray-900"></div>
+                  <p className="mt-2 text-sm text-gray-500">Loading products...</p>
+                </div>
+              ) : filteredProducts.length === 0 ? (
+                <div className="text-center py-8">
+                  <p className="text-muted-foreground">No products found</p>
+                </div>
+              ) : (
+                <div className="rounded-md border">
+                  <Table>
+                    <TableHeader>
+                      <TableRow>
+                        <TableHead>Product Code</TableHead>
+                        <TableHead>Description</TableHead>
+                        <TableHead>Unit</TableHead>
+                        <TableHead>Current Price</TableHead>
+                      </TableRow>
+                    </TableHeader>
+                    <TableBody>
+                      {filteredProducts.map((product) => (
+                        <TableRow 
+                          key={product.prodcode}
+                          className="cursor-pointer hover:bg-muted/50"
+                          onClick={() => handleProductClick(product)}
+                        >
+                          <TableCell className="font-medium">{product.prodcode}</TableCell>
+                          <TableCell>{product.description}</TableCell>
+                          <TableCell>{product.unit}</TableCell>
+                          <TableCell>
+                            {product.current_price !== null 
+                              ? `$${product.current_price.toFixed(2)}` 
+                              : 'No price set'}
+                          </TableCell>
+                        </TableRow>
+                      ))}
+                    </TableBody>
+                  </Table>
+                </div>
+              )
+              }
+            </CardContent>
+          </Card>
         </div>
         
-        <Card>
-          <CardHeader>
-            <CardTitle>Product List</CardTitle>
-            <CardDescription>
-              View and manage all your products
-            </CardDescription>
-          </CardHeader>
-          <CardContent>
-            {loading ? (
-              <div className="w-full py-8 text-center">
-                <div className="inline-block animate-spin rounded-full h-8 w-8 border-b-2 border-gray-900"></div>
-                <p className="mt-2 text-sm text-gray-500">Loading products...</p>
-              </div>
-            ) : filteredProducts.length === 0 ? (
-              <div className="text-center py-8">
-                <p className="text-muted-foreground">No products found</p>
-              </div>
-            ) : (
-              <div className="rounded-md border">
-                <Table>
-                  <TableHeader>
-                    <TableRow>
-                      <TableHead>Product Code</TableHead>
-                      <TableHead>Description</TableHead>
-                      <TableHead>Unit</TableHead>
-                      <TableHead>Current Price</TableHead>
-                    </TableRow>
-                  </TableHeader>
-                  <TableBody>
-                    {filteredProducts.map((product) => (
-                      <TableRow 
-                        key={product.prodcode}
-                        className="cursor-pointer hover:bg-muted/50"
-                        onClick={() => handleProductClick(product)}
-                      >
-                        <TableCell className="font-medium">{product.prodcode}</TableCell>
-                        <TableCell>{product.description}</TableCell>
-                        <TableCell>{product.unit}</TableCell>
-                        <TableCell>
-                          {product.current_price !== null 
-                            ? `$${product.current_price.toFixed(2)}` 
-                            : 'No price set'}
-                        </TableCell>
-                      </TableRow>
-                    ))}
-                  </TableBody>
-                </Table>
-              </div>
-            )}
-          </CardContent>
-        </Card>
+        <Footer />
       </div>
       
-      {/* Product Details Modal - Updated footer with improved button layout */}
-      {selectedProductDetails && (
+      {
+        selectedProductDetails && (
         <Dialog open={productDetailsOpen} onOpenChange={setProductDetailsOpen}>
           <DialogContent>
             <DialogHeader>
@@ -292,9 +323,9 @@ const Products = () => {
             </DialogFooter>
           </DialogContent>
         </Dialog>
-      )}
+      )
+      }
       
-      {/* Other Modals */}
       <PriceHistoryModal
         open={historyOpen}
         onOpenChange={setHistoryOpen}

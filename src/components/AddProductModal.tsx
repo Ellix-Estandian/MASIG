@@ -13,6 +13,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/components/ui/use-toast";
+import { useActivityLog } from "@/hooks/useActivityLog";
 
 interface AddProductModalProps {
   open: boolean;
@@ -27,6 +28,7 @@ const AddProductModal = ({ open, onOpenChange, onProductAdded }: AddProductModal
   const [price, setPrice] = useState("");
   const [loading, setLoading] = useState(false);
   const { toast } = useToast();
+  const { logActivity } = useActivityLog();
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -64,6 +66,17 @@ const AddProductModal = ({ open, onOpenChange, onProductAdded }: AddProductModal
         }]);
 
       if (priceError) throw priceError;
+
+      // Log the activity
+      await logActivity({
+        action: "added",
+        productCode,
+        productName: description,
+        details: {
+          unit,
+          initialPrice: parseFloat(price)
+        }
+      });
 
       toast({
         title: "Product added",

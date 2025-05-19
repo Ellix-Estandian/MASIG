@@ -13,6 +13,7 @@ import { Input } from "@/components/ui/input";
 import { useToast } from "@/components/ui/use-toast";
 import { supabase } from "@/integrations/supabase/client";
 import { Product } from "@/components/ProductTable";
+import { useActivityLog } from "@/hooks/useActivityLog";
 
 interface EditProductModalProps {
   open: boolean;
@@ -36,6 +37,7 @@ const EditProductModal = ({
   );
   const [saving, setSaving] = useState(false);
   const { toast } = useToast();
+  const { logActivity } = useActivityLog();
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -54,7 +56,9 @@ const EditProductModal = ({
       if (productError) throw productError;
       
       // Then, if price has changed, add a new price history record
-      if (price && (product.current_price === null || parseFloat(price) !== product.current_price)) {
+      const priceChanged = price && (product.current_price === null || parseFloat(price) !== product.current_price);
+      
+      if (priceChanged) {
         const newPrice = parseFloat(price);
         
         const { error: priceError } = await supabase
@@ -67,6 +71,22 @@ const EditProductModal = ({
           
         if (priceError) throw priceError;
       }
+      
+      // Log the activity
+      await logActivity({
+        action: "edited",
+        productCode: product.prodcode,
+        productName: description,
+        details: {
+          previousDescription: product.description,
+          newDescription: description,
+          previousUnit: product.unit,
+          newUnit: unit,
+          previousPrice: product.current_price,
+          newPrice: price ? parseFloat(price) : null,
+          priceChanged: priceChanged
+        }
+      });
       
       toast({
         title: "Product updated",
