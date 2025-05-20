@@ -5,7 +5,6 @@ import ActivityLogTab from "@/components/dashboard/ActivityLogTab";
 import ReportsTab from "@/components/dashboard/ReportsTab";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { useUserRoles } from "@/hooks/useUserRoles";
-import Footer from "@/components/Footer";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 
 const Reports = () => {
@@ -48,8 +47,6 @@ const Reports = () => {
             </div>
           )}
         </div>
-        
-        <Footer />
       </div>
     </DashboardLayout>
   );

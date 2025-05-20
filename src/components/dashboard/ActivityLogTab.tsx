@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect } from "react";
 import {
   Table,
@@ -16,16 +15,19 @@ import {
   Clock, 
   AlertCircle,
   Search,
-  Eye
+  Eye,
+  Download
 } from "lucide-react";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Badge } from "@/components/ui/badge";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { Input } from "@/components/ui/input";
+import { Button } from "@/components/ui/button";
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/components/ui/use-toast";
+import ActivityLogDownloadDialog from "./ActivityLogDownloadDialog";
 
-interface ActivityLog {
+export interface ActivityLog {
   id: string;
   user_id: string;
   user_email: string;
@@ -40,6 +42,7 @@ const ActivityLogTab: React.FC = () => {
   const [searchTerm, setSearchTerm] = useState("");
   const [activityLogs, setActivityLogs] = useState<ActivityLog[]>([]);
   const [loading, setLoading] = useState(true);
+  const [downloadDialogOpen, setDownloadDialogOpen] = useState(false);
   const { toast } = useToast();
 
   // Fetch activity logs from the database
@@ -173,15 +176,25 @@ const ActivityLogTab: React.FC = () => {
   return (
     <Card className="bg-background/60 backdrop-blur-sm border border-muted overflow-hidden">
       <div className="p-4">
-        <div className="relative w-full max-w-md mb-4">
-          <Search className="absolute left-2.5 top-2.5 h-4 w-4 text-muted-foreground" />
-          <Input
-            type="search"
-            placeholder="Search activity logs..."
-            value={searchTerm}
-            onChange={(e) => setSearchTerm(e.target.value)}
-            className="w-full pl-9 pr-4"
-          />
+        <div className="flex justify-between items-center mb-4">
+          <div className="relative w-full max-w-md">
+            <Search className="absolute left-2.5 top-2.5 h-4 w-4 text-muted-foreground" />
+            <Input
+              type="search"
+              placeholder="Search activity logs..."
+              value={searchTerm}
+              onChange={(e) => setSearchTerm(e.target.value)}
+              className="w-full pl-9 pr-4"
+            />
+          </div>
+          <Button 
+            variant="outline" 
+            className="ml-2 flex items-center"
+            onClick={() => setDownloadDialogOpen(true)}
+          >
+            <Download className="mr-2 h-4 w-4" />
+            Download
+          </Button>
         </div>
         
         {loading ? (
@@ -250,6 +263,12 @@ const ActivityLogTab: React.FC = () => {
           </div>
         )}
       </div>
+      
+      <ActivityLogDownloadDialog 
+        open={downloadDialogOpen}
+        onOpenChange={setDownloadDialogOpen}
+        activityLogs={filteredActivityLogs}
+      />
     </Card>
   );
 };
