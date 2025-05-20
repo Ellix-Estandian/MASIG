@@ -23,13 +23,14 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
+import { Input } from "@/components/ui/input";
 import {
   downloadActivityLogPDF,
   filterActivityLogsByDate,
   filterActivityLogsByAction
 } from "@/utils/pdfGenerator";
 import { ActivityLog } from "./ActivityLogTab";
-import { CalendarIcon, Check } from "lucide-react";
+import { CalendarIcon, Check, Clock } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { useToast } from "@/components/ui/use-toast";
 
@@ -46,17 +47,48 @@ const ActivityLogDownloadDialog: React.FC<ActivityLogDownloadDialogProps> = ({
 }) => {
   const [startDate, setStartDate] = useState<Date | undefined>(undefined);
   const [endDate, setEndDate] = useState<Date | undefined>(undefined);
+  const [startTime, setStartTime] = useState<string>("");
+  const [endTime, setEndTime] = useState<string>("");
   const [actionType, setActionType] = useState<string | undefined>(undefined);
   const [reportTitle, setReportTitle] = useState("Activity Log Report");
   const { toast } = useToast();
 
+  // Generate a list of time options every 30 minutes
+  const getTimeOptions = () => {
+    const options = [];
+    for (let hour = 0; hour < 24; hour++) {
+      for (let minute of [0, 30]) {
+        const formattedHour = hour.toString().padStart(2, '0');
+        const formattedMinute = minute.toString().padStart(2, '0');
+        const time = `${formattedHour}:${formattedMinute}`;
+        options.push({ value: time, label: time });
+      }
+    }
+    return options;
+  };
+
+  const timeOptions = getTimeOptions();
+
   const handleDownload = () => {
     try {
-      // Filter logs by date and action type
+      console.log("Starting download with filters:", { 
+        startDate, endDate, startTime, endTime, actionType 
+      });
+      
+      // Filter logs by date, time and action type
       let filteredLogs = [...activityLogs];
       
-      filteredLogs = filterActivityLogsByDate(filteredLogs, startDate, endDate);
+      filteredLogs = filterActivityLogsByDate(
+        filteredLogs, 
+        startDate, 
+        endDate, 
+        startTime, 
+        endTime
+      );
+      
       filteredLogs = filterActivityLogsByAction(filteredLogs, actionType);
+      
+      console.log("Filtered logs count:", filteredLogs.length);
       
       if (filteredLogs.length === 0) {
         toast({
@@ -158,6 +190,54 @@ const ActivityLogDownloadDialog: React.FC<ActivityLogDownloadDialogProps> = ({
                   />
                 </PopoverContent>
               </Popover>
+            </div>
+          </div>
+          
+          <div className="grid grid-cols-4 items-center gap-4">
+            <div className="text-sm font-medium col-span-4">Filter by time range:</div>
+            
+            <div className="col-span-2">
+              <Select
+                value={startTime}
+                onValueChange={setStartTime}
+              >
+                <SelectTrigger className="w-full">
+                  <div className="flex items-center">
+                    <Clock className="mr-2 h-4 w-4" />
+                    <SelectValue placeholder="Start time" />
+                  </div>
+                </SelectTrigger>
+                <SelectContent className="max-h-[300px]">
+                  <SelectItem value="">Any time</SelectItem>
+                  {timeOptions.map((option) => (
+                    <SelectItem key={option.value} value={option.value}>
+                      {option.label}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+            
+            <div className="col-span-2">
+              <Select
+                value={endTime}
+                onValueChange={setEndTime}
+              >
+                <SelectTrigger className="w-full">
+                  <div className="flex items-center">
+                    <Clock className="mr-2 h-4 w-4" />
+                    <SelectValue placeholder="End time" />
+                  </div>
+                </SelectTrigger>
+                <SelectContent className="max-h-[300px]">
+                  <SelectItem value="">Any time</SelectItem>
+                  {timeOptions.map((option) => (
+                    <SelectItem key={option.value} value={option.value}>
+                      {option.label}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
             </div>
           </div>
           

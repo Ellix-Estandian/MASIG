@@ -66,23 +66,38 @@ export const downloadActivityLogPDF = (
 export const filterActivityLogsByDate = (
   logs: ActivityLog[],
   startDate?: Date,
-  endDate?: Date
+  endDate?: Date,
+  startTime?: string,
+  endTime?: string
 ): ActivityLog[] => {
   if (!startDate && !endDate) return logs;
   
   return logs.filter(log => {
     const logDate = new Date(log.created_at);
     
-    if (startDate && endDate) {
-      return logDate >= startDate && logDate <= endDate;
-    }
-    
+    // Handle date filtering
     if (startDate) {
-      return logDate >= startDate;
+      const startDateTime = new Date(startDate);
+      if (startTime) {
+        const [startHours, startMinutes] = startTime.split(':').map(Number);
+        startDateTime.setHours(startHours, startMinutes, 0, 0);
+      } else {
+        startDateTime.setHours(0, 0, 0, 0);
+      }
+      
+      if (logDate < startDateTime) return false;
     }
     
     if (endDate) {
-      return logDate <= endDate;
+      const endDateTime = new Date(endDate);
+      if (endTime) {
+        const [endHours, endMinutes] = endTime.split(':').map(Number);
+        endDateTime.setHours(endHours, endMinutes, 0, 0);
+      } else {
+        endDateTime.setHours(23, 59, 59, 999);
+      }
+      
+      if (logDate > endDateTime) return false;
     }
     
     return true;
