@@ -1,5 +1,6 @@
 
 import jsPDF from "jspdf";
+// Import jspdf-autotable types
 import "jspdf-autotable";
 import { ActivityLog } from "@/components/dashboard/ActivityLogTab";
 

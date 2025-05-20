@@ -55,12 +55,12 @@ const ActivityLogDownloadDialog: React.FC<ActivityLogDownloadDialogProps> = ({
     filteredLogs = filterActivityLogsByDate(filteredLogs, startDate, endDate);
     filteredLogs = filterActivityLogsByAction(filteredLogs, actionType);
     
-    // Generate file name
-    const dateStr = format(new Date(), "yyyy-MM-dd");
-    let fileName = `activity-logs-${dateStr}.pdf`;
+    // Generate file name with timestamp
+    const dateTimeStr = format(new Date(), "yyyy-MM-dd_HH-mm-ss");
+    let fileName = `activity-logs-${dateTimeStr}.pdf`;
     
     if (actionType) {
-      fileName = `${actionType}-logs-${dateStr}.pdf`;
+      fileName = `${actionType}-logs-${dateTimeStr}.pdf`;
     }
     
     // Download PDF
