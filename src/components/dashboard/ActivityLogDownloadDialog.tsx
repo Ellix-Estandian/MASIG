@@ -31,6 +31,7 @@ import {
 import { ActivityLog } from "./ActivityLogTab";
 import { CalendarIcon, Check } from "lucide-react";
 import { cn } from "@/lib/utils";
+import { useToast } from "@/components/ui/use-toast";
 
 interface ActivityLogDownloadDialogProps {
   open: boolean;
@@ -47,27 +48,52 @@ const ActivityLogDownloadDialog: React.FC<ActivityLogDownloadDialogProps> = ({
   const [endDate, setEndDate] = useState<Date | undefined>(undefined);
   const [actionType, setActionType] = useState<string | undefined>(undefined);
   const [reportTitle, setReportTitle] = useState("Activity Log Report");
+  const { toast } = useToast();
 
   const handleDownload = () => {
-    // Filter logs by date and action type
-    let filteredLogs = [...activityLogs];
-    
-    filteredLogs = filterActivityLogsByDate(filteredLogs, startDate, endDate);
-    filteredLogs = filterActivityLogsByAction(filteredLogs, actionType);
-    
-    // Generate file name with timestamp
-    const dateTimeStr = format(new Date(), "yyyy-MM-dd_HH-mm-ss");
-    let fileName = `activity-logs-${dateTimeStr}.pdf`;
-    
-    if (actionType) {
-      fileName = `${actionType}-logs-${dateTimeStr}.pdf`;
+    try {
+      // Filter logs by date and action type
+      let filteredLogs = [...activityLogs];
+      
+      filteredLogs = filterActivityLogsByDate(filteredLogs, startDate, endDate);
+      filteredLogs = filterActivityLogsByAction(filteredLogs, actionType);
+      
+      if (filteredLogs.length === 0) {
+        toast({
+          title: "No data to export",
+          description: "There are no activity logs matching your filter criteria.",
+          variant: "destructive",
+        });
+        return;
+      }
+      
+      // Generate file name with timestamp
+      const dateTimeStr = format(new Date(), "yyyy-MM-dd_HH-mm-ss");
+      let fileName = `activity-logs-${dateTimeStr}.pdf`;
+      
+      if (actionType) {
+        fileName = `${actionType}-logs-${dateTimeStr}.pdf`;
+      }
+      
+      // Download PDF
+      downloadActivityLogPDF(filteredLogs, fileName, reportTitle);
+      
+      // Show success toast
+      toast({
+        title: "PDF Downloaded",
+        description: `The activity log has been downloaded as ${fileName}`,
+      });
+      
+      // Close dialog
+      onOpenChange(false);
+    } catch (error) {
+      console.error("PDF download error:", error);
+      toast({
+        title: "Download Failed",
+        description: "An error occurred while generating the PDF. Please try again.",
+        variant: "destructive",
+      });
     }
-    
-    // Download PDF
-    downloadActivityLogPDF(filteredLogs, fileName, reportTitle);
-    
-    // Close dialog
-    onOpenChange(false);
   };
 
   return (
