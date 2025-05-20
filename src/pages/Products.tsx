@@ -255,8 +255,6 @@ const Products = () => {
             </CardContent>
           </Card>
         </div>
-        
-        <Footer />
       </div>
       
       {
