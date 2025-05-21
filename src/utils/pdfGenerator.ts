@@ -1,5 +1,6 @@
 
 import { jsPDF } from "jspdf";
+// Fix the import for jspdf-autotable - we need to import it this way to ensure it's properly loaded
 import "jspdf-autotable";
 import { ActivityLog } from "@/components/dashboard/ActivityLogTab";
 
@@ -21,6 +22,12 @@ export const generateActivityLogPDF = (
   
   // Create new document
   const doc = new jsPDF();
+  
+  // Make sure jspdf-autotable is properly loaded
+  if (typeof doc.autoTable !== 'function') {
+    console.error("jspdf-autotable is not properly loaded");
+    throw new Error("PDF generation failed: Required library not loaded correctly");
+  }
   
   // Add company name centered at the top
   doc.setFontSize(24);
@@ -51,18 +58,23 @@ export const generateActivityLogPDF = (
     log.action_type.charAt(0).toUpperCase() + log.action_type.slice(1)
   ]);
   
-  // Create table with just the three columns from image: Name, Time, Action
-  doc.autoTable({
-    startY: 90,
-    head: [["Name", "Time", "Action"]],
-    body: tableData,
-    theme: 'grid',
-    headStyles: { fillColor: [255, 255, 255], textColor: 0, lineWidth: 0.5, lineColor: [0, 0, 0] },
-    bodyStyles: { lineColor: [0, 0, 0], lineWidth: 0.5 },
-    tableLineColor: [0, 0, 0],
-    tableLineWidth: 0.5,
-    styles: { overflow: 'linebreak', cellPadding: 5 },
-  });
+  try {
+    // Create table with just the three columns from image: Name, Time, Action
+    doc.autoTable({
+      startY: 90,
+      head: [["Name", "Time", "Action"]],
+      body: tableData,
+      theme: 'grid',
+      headStyles: { fillColor: [255, 255, 255], textColor: 0, lineWidth: 0.5, lineColor: [0, 0, 0] },
+      bodyStyles: { lineColor: [0, 0, 0], lineWidth: 0.5 },
+      tableLineColor: [0, 0, 0],
+      tableLineWidth: 0.5,
+      styles: { overflow: 'linebreak', cellPadding: 5 },
+    });
+  } catch (error) {
+    console.error("Error creating table:", error);
+    throw new Error("Failed to create PDF table. Technical details: " + error.message);
+  }
   
   // Add "Put the date here when it was printed" at bottom
   const pageHeight = doc.internal.pageSize.height;
