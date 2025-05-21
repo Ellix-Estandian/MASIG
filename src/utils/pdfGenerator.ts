@@ -14,43 +14,63 @@ export const generateActivityLogPDF = (
   activityLogs: ActivityLog[],
   title: string = "Activity Log Report"
 ): jsPDF => {
+  console.log("Generating PDF for", activityLogs.length, "logs");
+  if (activityLogs.length === 0) {
+    throw new Error("No data available to generate PDF");
+  }
+  
   // Create new document
   const doc = new jsPDF();
   
-  // Add title
-  doc.setFontSize(18);
-  doc.text(title, 14, 22);
+  // Add company name centered at the top
+  doc.setFontSize(24);
+  doc.text("MASIG", doc.internal.pageSize.width / 2, 30, { align: "center" });
   
-  // Add timestamp
-  doc.setFontSize(11);
-  doc.setTextColor(100);
-  const dateStr = new Date().toLocaleString();
-  doc.text(`Generated on: ${dateStr}`, 14, 30);
+  // Add Date and Time labels
+  doc.setFontSize(12);
+  doc.text("Date:", 40, 50);
+  doc.text("Time:", 40, 60);
+  doc.text("Product:", 40, 70);
   
-  // Company name
-  doc.setFontSize(16);
-  doc.setTextColor(0);
-  doc.text("MASIG", 14, 40);
+  // Add current date and time
+  const currentDate = new Date();
+  doc.text(currentDate.toLocaleDateString(), 80, 50);
+  doc.text(currentDate.toLocaleTimeString(), 80, 60);
   
-  // Format data for the table
+  // If filtering by a specific product, show it
+  if (activityLogs.length > 0 && activityLogs[0].product_name) {
+    doc.text(activityLogs[0].product_name, 80, 70);
+  } else {
+    doc.text("All Products", 80, 70);
+  }
+  
+  // Format data for the table - simplified to match the image format
   const tableData = activityLogs.map(log => [
-    new Date(log.created_at).toLocaleString(),
     log.user_email,
-    log.action_type.charAt(0).toUpperCase() + log.action_type.slice(1),
-    log.product_code || "N/A",
-    log.product_name || "N/A"
+    new Date(log.created_at).toLocaleString(),
+    log.action_type.charAt(0).toUpperCase() + log.action_type.slice(1)
   ]);
   
-  // Create table
+  // Create table with just the three columns from image: Name, Time, Action
   doc.autoTable({
-    startY: 50,
-    head: [["Timestamp", "User", "Action", "Product Code", "Product Name"]],
+    startY: 90,
+    head: [["Name", "Time", "Action"]],
     body: tableData,
-    headStyles: { fillColor: [41, 128, 185], textColor: 255 },
-    alternateRowStyles: { fillColor: [240, 240, 240] },
-    margin: { top: 50 }
+    theme: 'grid',
+    headStyles: { fillColor: [255, 255, 255], textColor: 0, lineWidth: 0.5, lineColor: [0, 0, 0] },
+    bodyStyles: { lineColor: [0, 0, 0], lineWidth: 0.5 },
+    tableLineColor: [0, 0, 0],
+    tableLineWidth: 0.5,
+    styles: { overflow: 'linebreak', cellPadding: 5 },
   });
   
+  // Add "Put the date here when it was printed" at bottom
+  const pageHeight = doc.internal.pageSize.height;
+  doc.setTextColor(255, 0, 0);  // Red text
+  doc.text("Put the date here when it was printed", doc.internal.pageSize.width / 2, pageHeight - 20, { align: "center" });
+  doc.setTextColor(0);  // Reset text color
+  
+  console.log("PDF generated successfully");
   return doc;
 };
 
@@ -59,8 +79,19 @@ export const downloadActivityLogPDF = (
   fileName: string = "activity-logs.pdf",
   title: string = "Activity Log Report"
 ): void => {
-  const doc = generateActivityLogPDF(activityLogs, title);
-  doc.save(fileName);
+  try {
+    console.log("Starting PDF download with", activityLogs.length, "logs");
+    if (activityLogs.length === 0) {
+      throw new Error("No activity logs to export");
+    }
+    
+    const doc = generateActivityLogPDF(activityLogs, title);
+    doc.save(fileName);
+    console.log("PDF downloaded successfully as", fileName);
+  } catch (error) {
+    console.error("PDF download error:", error);
+    throw error; // Propagate the error so we can handle it in the UI
+  }
 };
 
 export const filterActivityLogsByDate = (
@@ -128,6 +159,6 @@ export const filterActivityLogsByAction = (
   logs: ActivityLog[],
   actionType?: string
 ): ActivityLog[] => {
-  if (!actionType) return logs;
+  if (!actionType || actionType === "all") return logs;
   return logs.filter(log => log.action_type === actionType);
 };

@@ -47,10 +47,11 @@ const ActivityLogDownloadDialog: React.FC<ActivityLogDownloadDialogProps> = ({
 }) => {
   const [startDate, setStartDate] = useState<Date | undefined>(undefined);
   const [endDate, setEndDate] = useState<Date | undefined>(undefined);
-  const [startTime, setStartTime] = useState<string>("");
-  const [endTime, setEndTime] = useState<string>("");
-  const [actionType, setActionType] = useState<string | undefined>("all");
+  const [startTime, setStartTime] = useState<string>("any-time");
+  const [endTime, setEndTime] = useState<string>("any-time");
+  const [actionType, setActionType] = useState<string>("all");
   const [reportTitle, setReportTitle] = useState("Activity Log Report");
+  const [loading, setLoading] = useState(false);
   const { toast } = useToast();
 
   // Generate a list of time options every 30 minutes
@@ -69,7 +70,8 @@ const ActivityLogDownloadDialog: React.FC<ActivityLogDownloadDialogProps> = ({
 
   const timeOptions = getTimeOptions();
 
-  const handleDownload = () => {
+  const handleDownload = async () => {
+    setLoading(true);
     try {
       console.log("Starting download with filters:", { 
         startDate, endDate, startTime, endTime, actionType 
@@ -99,6 +101,7 @@ const ActivityLogDownloadDialog: React.FC<ActivityLogDownloadDialogProps> = ({
           description: "There are no activity logs matching your filter criteria.",
           variant: "destructive",
         });
+        setLoading(false);
         return;
       }
       
@@ -111,7 +114,7 @@ const ActivityLogDownloadDialog: React.FC<ActivityLogDownloadDialogProps> = ({
       }
       
       // Download PDF
-      downloadActivityLogPDF(filteredLogs, fileName, reportTitle);
+      await downloadActivityLogPDF(filteredLogs, fileName, reportTitle);
       
       // Show success toast
       toast({
@@ -121,13 +124,15 @@ const ActivityLogDownloadDialog: React.FC<ActivityLogDownloadDialogProps> = ({
       
       // Close dialog
       onOpenChange(false);
-    } catch (error) {
-      console.error("PDF download error:", error);
+    } catch (error: any) {
+      console.error("PDF download failed:", error);
       toast({
         title: "Download Failed",
-        description: "An error occurred while generating the PDF. Please try again.",
+        description: error.message || "An error occurred while generating the PDF. Please try again.",
         variant: "destructive",
       });
+    } finally {
+      setLoading(false);
     }
   };
 
@@ -267,11 +272,20 @@ const ActivityLogDownloadDialog: React.FC<ActivityLogDownloadDialogProps> = ({
         </div>
         
         <DialogFooter>
-          <Button variant="outline" onClick={() => onOpenChange(false)}>
+          <Button variant="outline" onClick={() => onOpenChange(false)} disabled={loading}>
             Cancel
           </Button>
-          <Button onClick={handleDownload}>
-            <Check className="mr-2 h-4 w-4" /> Download PDF
+          <Button onClick={handleDownload} disabled={loading}>
+            {loading ? (
+              <>
+                <div className="animate-spin mr-2 h-4 w-4 border-2 border-b-transparent rounded-full"></div>
+                Generating...
+              </>
+            ) : (
+              <>
+                <Check className="mr-2 h-4 w-4" /> Download PDF
+              </>
+            )}
           </Button>
         </DialogFooter>
       </DialogContent>
