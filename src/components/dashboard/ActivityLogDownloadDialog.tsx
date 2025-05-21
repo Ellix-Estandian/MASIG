@@ -1,80 +1,80 @@
-// pdf/activityLogPdf.ts -----------------------------------------------------
-import jsPDF from "jspdf";          // ✅ default import, no curly braces
+import React from "react";
+import jsPDF from "jspdf";
 import autoTable from "jspdf-autotable";
-import { ActivityLog } from "@/components/dashboard/ActivityLogTab";
+import { Dialog, DialogContent } from "@/components/ui/dialog";
+import { Button } from "@/components/ui/button";
+import { useToast } from "@/components/ui/use-toast";
+import { ActivityLog } from "./ActivityLogTab";
 
-/**
- * Build the PDF and return the jsPDF instance
- */
-export function generateActivityLogPDF(
-  logs: ActivityLog[],
-  title = "Activity Log Report"
-): jsPDF {
-  if (!logs || logs.length === 0) {
-    throw new Error("No data available to generate PDF");
-  }
+interface Props {
+  open: boolean;
+  onOpenChange: (open: boolean) => void;
+  activityLogs: ActivityLog[];
+}
 
-  const doc = new jsPDF();
+const ActivityLogDownloadDialog: React.FC<Props> = ({
+  open,
+  onOpenChange,
+  activityLogs,
+}) => {
+  const { toast } = useToast();
 
-  /* ---------- header ---------- */
-  doc.setFontSize(24);
-  doc.text("MASIG", doc.internal.pageSize.width / 2, 30, { align: "center" });
+  const handleDownload = () => {
+    try {
+      const doc = new jsPDF();
 
-  doc.setFontSize(12);
-  const now = new Date();
-  doc.text("Date:", 40, 50);
-  doc.text(now.toLocaleDateString(), 80, 50);
-  doc.text("Time:", 40, 60);
-  doc.text(now.toLocaleTimeString(), 80, 60);
-  doc.text("Product:", 40, 70);
-  doc.text(logs[0]?.product_name ?? "All Products", 80, 70);
+      // Define table headers and body
+      const headers = [["User", "Action", "Product", "Code", "Time"]];
+      const body = activityLogs.map((log) => [
+        log.user_email,
+        log.action_type,
+        log.product_name || "N/A",
+        log.product_code || "N/A",
+        new Intl.DateTimeFormat("en-US", {
+          year: "numeric",
+          month: "short",
+          day: "2-digit",
+          hour: "2-digit",
+          minute: "2-digit",
+          hour12: false, // ✅ Use 24-hour format
+        }).format(new Date(log.created_at)),
+      ]);
 
-  /* ---------- table ---------- */
-  const rows = logs.map((l) => [
-    l.user_email,
-    new Date(l.created_at).toLocaleString(),
-    l.action_type[0].toUpperCase() + l.action_type.slice(1),
-  ]);
+      // Add table to PDF
+      autoTable(doc, {
+        head: headers,
+        body: body,
+        styles: {
+          fontSize: 10,
+        },
+      });
 
-  // <--  the critical line: call the *function*, pass `doc` first  ---------
-  autoTable(doc, {
-    startY: 90,
-    head: [["Name", "Time", "Action"]],
-    body: rows,
-    theme: "grid",
-    headStyles: { fillColor: [255, 255, 255], textColor: 0 },
-    bodyStyles: { lineColor: [0, 0, 0], lineWidth: 0.5 },
-    styles: { overflow: "linebreak", cellPadding: 5 },
-  });
+      doc.save("activity-logs.pdf");
+      onOpenChange(false);
+    } catch (error: any) {
+      toast({
+        variant: "destructive",
+        title: "Download Failed",
+        description:
+          "Failed to generate PDF: " +
+          (error.message || "Unknown error occurred."),
+      });
+    }
+  };
 
-  /* ---------- footer ---------- */
-  doc.setTextColor(255, 0, 0);
-  doc.text(
-    "Put the date here when it was printed",
-    doc.internal.pageSize.width / 2,
-    doc.internal.pageSize.height - 20,
-    { align: "center" }
+  return (
+    <Dialog open={open} onOpenChange={onOpenChange}>
+      <DialogContent className="sm:max-w-md">
+        <div className="flex flex-col gap-4 text-center">
+          <h2 className="text-lg font-semibold">Download Activity Logs</h2>
+          <p className="text-sm text-muted-foreground">
+            This will export the filtered activity logs as a PDF file.
+          </p>
+          <Button onClick={handleDownload}>Download PDF</Button>
+        </div>
+      </DialogContent>
+    </Dialog>
   );
-  doc.setTextColor(0);
+};
 
-  return doc;
-}
-
-/**
- * Trigger the browser download
- */
-export function downloadActivityLogPDF(
-  logs: ActivityLog[],
-  fileName = "activity-logs.pdf"
-): void {
-  // guard-rail
-  if (!logs || logs.length === 0) {
-    throw new Error("No activity logs to export");
-  }
-
-  // Make sure we’re in the browser, not during SSR
-  if (typeof window === "undefined") return;
-
-  const pdf = generateActivityLogPDF(logs);
-  pdf.save(fileName);
-}
+export default ActivityLogDownloadDialog;
