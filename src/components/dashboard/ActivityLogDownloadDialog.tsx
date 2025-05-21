@@ -49,7 +49,7 @@ const ActivityLogDownloadDialog: React.FC<ActivityLogDownloadDialogProps> = ({
   const [endDate, setEndDate] = useState<Date | undefined>(undefined);
   const [startTime, setStartTime] = useState<string>("");
   const [endTime, setEndTime] = useState<string>("");
-  const [actionType, setActionType] = useState<string | undefined>(undefined);
+  const [actionType, setActionType] = useState<string | undefined>("all");
   const [reportTitle, setReportTitle] = useState("Activity Log Report");
   const { toast } = useToast();
 
@@ -86,7 +86,10 @@ const ActivityLogDownloadDialog: React.FC<ActivityLogDownloadDialogProps> = ({
         endTime
       );
       
-      filteredLogs = filterActivityLogsByAction(filteredLogs, actionType);
+      // Only filter by action if it's not "all"
+      if (actionType && actionType !== "all") {
+        filteredLogs = filterActivityLogsByAction(filteredLogs, actionType);
+      }
       
       console.log("Filtered logs count:", filteredLogs.length);
       
@@ -103,7 +106,7 @@ const ActivityLogDownloadDialog: React.FC<ActivityLogDownloadDialogProps> = ({
       const dateTimeStr = format(new Date(), "yyyy-MM-dd_HH-mm-ss");
       let fileName = `activity-logs-${dateTimeStr}.pdf`;
       
-      if (actionType) {
+      if (actionType && actionType !== "all") {
         fileName = `${actionType}-logs-${dateTimeStr}.pdf`;
       }
       
@@ -252,7 +255,7 @@ const ActivityLogDownloadDialog: React.FC<ActivityLogDownloadDialogProps> = ({
                   <SelectValue placeholder="All Actions" />
                 </SelectTrigger>
                 <SelectContent>
-                  <SelectItem value={undefined}>All Actions</SelectItem>
+                  <SelectItem value="all">All Actions</SelectItem>
                   <SelectItem value="added">Added</SelectItem>
                   <SelectItem value="edited">Edited</SelectItem>
                   <SelectItem value="deleted">Deleted</SelectItem>

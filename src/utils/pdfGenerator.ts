@@ -70,7 +70,7 @@ export const filterActivityLogsByDate = (
   startTime?: string,
   endTime?: string
 ): ActivityLog[] => {
-  if (!startDate && !endDate) return logs;
+  if (!startDate && !endDate && !startTime && !endTime) return logs;
   
   return logs.filter(log => {
     const logDate = new Date(log.created_at);
@@ -86,18 +86,36 @@ export const filterActivityLogsByDate = (
       }
       
       if (logDate < startDateTime) return false;
+    } else if (startTime) {
+      // If only start time is provided without a date, check against current day
+      const [startHours, startMinutes] = startTime.split(':').map(Number);
+      const logHours = logDate.getHours();
+      const logMinutes = logDate.getMinutes();
+      
+      if (logHours < startHours || (logHours === startHours && logMinutes < startMinutes)) {
+        return false;
+      }
     }
     
     if (endDate) {
       const endDateTime = new Date(endDate);
       if (endTime) {
         const [endHours, endMinutes] = endTime.split(':').map(Number);
-        endDateTime.setHours(endHours, endMinutes, 0, 0);
+        endDateTime.setHours(endHours, endMinutes, 59, 999);
       } else {
         endDateTime.setHours(23, 59, 59, 999);
       }
       
       if (logDate > endDateTime) return false;
+    } else if (endTime) {
+      // If only end time is provided without a date, check against current day
+      const [endHours, endMinutes] = endTime.split(':').map(Number);
+      const logHours = logDate.getHours();
+      const logMinutes = logDate.getMinutes();
+      
+      if (logHours > endHours || (logHours === endHours && logMinutes > endMinutes)) {
+        return false;
+      }
     }
     
     return true;
