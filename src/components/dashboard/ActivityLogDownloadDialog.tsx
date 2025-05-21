@@ -211,7 +211,7 @@ const ActivityLogDownloadDialog: React.FC<ActivityLogDownloadDialogProps> = ({
                   </div>
                 </SelectTrigger>
                 <SelectContent className="max-h-[300px]">
-                  <SelectItem value="">Any time</SelectItem>
+                  <SelectItem value="any-time">Any time</SelectItem>
                   {timeOptions.map((option) => (
                     <SelectItem key={option.value} value={option.value}>
                       {option.label}
@@ -233,7 +233,7 @@ const ActivityLogDownloadDialog: React.FC<ActivityLogDownloadDialogProps> = ({
                   </div>
                 </SelectTrigger>
                 <SelectContent className="max-h-[300px]">
-                  <SelectItem value="">Any time</SelectItem>
+                  <SelectItem value="any-time">Any time</SelectItem>
                   {timeOptions.map((option) => (
                     <SelectItem key={option.value} value={option.value}>
                       {option.label}
