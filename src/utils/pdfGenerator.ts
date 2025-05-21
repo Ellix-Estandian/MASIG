@@ -1,5 +1,5 @@
 import { jsPDF } from "jspdf";
-import "jspdf-autotable";
+import autoTable from 'jspdf-autotable';
 import { ActivityLog } from "@/components/dashboard/ActivityLogTab";
 
 // Define the types for jspdf-autotable to make TypeScript happy
@@ -21,13 +21,19 @@ export const generateActivityLogPDF = (
   // Create new document
   const doc = new jsPDF();
   
-  // Verify if jspdf-autotable is properly loaded
-  if (typeof doc.autoTable !== 'function') {
-    console.error("jspdf-autotable is not properly loaded");
-    throw new Error("PDF generation failed: Required library not loaded correctly");
-  }
-  
   try {
+    // Add the autoTable plugin to the document
+    // This is essential for making autoTable work with jsPDF
+    (doc as any).autoTable = autoTable;
+    
+    // Verify if our plugin attachment worked
+    if (typeof (doc as any).autoTable !== 'function') {
+      console.error("Failed to attach autoTable to jsPDF instance");
+      throw new Error("PDF generation failed: Required library not loaded correctly");
+    }
+    
+    console.log("autoTable plugin successfully attached to jsPDF instance");
+    
     // Add company name centered at the top
     doc.setFontSize(24);
     doc.text("MASIG", doc.internal.pageSize.width / 2, 30, { align: "center" });
@@ -58,8 +64,9 @@ export const generateActivityLogPDF = (
     ]);
     
     try {
+      console.log("Attempting to create table with", tableData.length, "rows");
       // Create table with just the three columns from image: Name, Time, Action
-      doc.autoTable({
+      (doc as any).autoTable({
         startY: 90,
         head: [["Name", "Time", "Action"]],
         body: tableData,
@@ -70,9 +77,10 @@ export const generateActivityLogPDF = (
         tableLineWidth: 0.5,
         styles: { overflow: 'linebreak', cellPadding: 5 },
       });
+      console.log("Table created successfully");
     } catch (error) {
       console.error("Error creating table:", error);
-      throw new Error("Failed to create PDF table. Technical details: " + error.message);
+      throw new Error("Failed to create PDF table. Technical details: " + (error as Error).message);
     }
     
     // Add "Put the date here when it was printed" at bottom
@@ -85,7 +93,7 @@ export const generateActivityLogPDF = (
     return doc;
   } catch (error) {
     console.error("Error in PDF generation:", error);
-    throw new Error(`Failed to generate PDF: ${error.message}`);
+    throw new Error(`Failed to generate PDF: ${(error as Error).message}`);
   }
 };
 

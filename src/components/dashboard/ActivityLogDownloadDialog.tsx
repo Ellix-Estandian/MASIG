@@ -30,7 +30,7 @@ import {
 import { ActivityLog } from "./ActivityLogTab";
 import { CalendarIcon, Check, Clock } from "lucide-react";
 import { cn } from "@/lib/utils";
-import { useToast } from "@/components/ui/use-toast";
+import { useToast } from "@/hooks/use-toast";
 
 interface ActivityLogDownloadDialogProps {
   open: boolean;
@@ -68,7 +68,7 @@ const ActivityLogDownloadDialog: React.FC<ActivityLogDownloadDialogProps> = ({
 
   const timeOptions = getTimeOptions();
 
-  const handleDownload = async () => {
+  const handleDownload = () => {
     setLoading(true);
     try {
       console.log("Starting download with filters:", { 
@@ -111,22 +111,31 @@ const ActivityLogDownloadDialog: React.FC<ActivityLogDownloadDialogProps> = ({
         fileName = `${actionType}-logs-${dateTimeStr}.pdf`;
       }
       
-      // Download PDF
-      downloadActivityLogPDF(filteredLogs, fileName, reportTitle);
-      
-      // Show success toast
-      toast({
-        title: "PDF Downloaded",
-        description: `The activity log has been downloaded as ${fileName}`,
-      });
-      
-      // Close dialog
-      onOpenChange(false);
+      try {
+        // Download PDF
+        downloadActivityLogPDF(filteredLogs, fileName, reportTitle);
+        
+        // Show success toast
+        toast({
+          title: "PDF Downloaded",
+          description: `The activity log has been downloaded as ${fileName}`,
+        });
+        
+        // Close dialog
+        onOpenChange(false);
+      } catch (error: any) {
+        console.error("PDF download failed:", error);
+        toast({
+          title: "Download Failed",
+          description: error.message || "An error occurred while generating the PDF. Please try again.",
+          variant: "destructive",
+        });
+      }
     } catch (error: any) {
-      console.error("PDF download failed:", error);
+      console.error("PDF processing error:", error);
       toast({
-        title: "Download Failed",
-        description: error.message || "An error occurred while generating the PDF. Please try again.",
+        title: "Processing Failed",
+        description: error.message || "An error occurred while processing the data. Please try again.",
         variant: "destructive",
       });
     } finally {

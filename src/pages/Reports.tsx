@@ -49,6 +49,7 @@ const Reports = () => {
           )}
         </div>
       </div>
+      <Toaster />
     </DashboardLayout>
   );
 };
