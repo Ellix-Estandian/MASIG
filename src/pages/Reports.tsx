@@ -6,6 +6,7 @@ import ReportsTab from "@/components/dashboard/ReportsTab";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { useUserRoles } from "@/hooks/useUserRoles";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { Toaster } from "@/components/ui/toaster";
 
 const Reports = () => {
   const { isAdmin } = useUserRoles();

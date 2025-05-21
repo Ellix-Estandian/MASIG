@@ -1,4 +1,3 @@
-
 import React, { useState } from "react";
 import { format } from "date-fns";
 import {
@@ -23,7 +22,6 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import { Input } from "@/components/ui/input";
 import {
   downloadActivityLogPDF,
   filterActivityLogsByDate,
@@ -114,7 +112,7 @@ const ActivityLogDownloadDialog: React.FC<ActivityLogDownloadDialogProps> = ({
       }
       
       // Download PDF
-      await downloadActivityLogPDF(filteredLogs, fileName, reportTitle);
+      downloadActivityLogPDF(filteredLogs, fileName, reportTitle);
       
       // Show success toast
       toast({

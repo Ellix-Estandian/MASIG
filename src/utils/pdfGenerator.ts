@@ -1,4 +1,3 @@
-
 import { jsPDF } from "jspdf";
 import "jspdf-autotable";
 import { ActivityLog } from "@/components/dashboard/ActivityLogTab";
@@ -19,16 +18,16 @@ export const generateActivityLogPDF = (
     throw new Error("No data available to generate PDF");
   }
   
+  // Create new document
+  const doc = new jsPDF();
+  
+  // Verify if jspdf-autotable is properly loaded
+  if (typeof doc.autoTable !== 'function') {
+    console.error("jspdf-autotable is not properly loaded");
+    throw new Error("PDF generation failed: Required library not loaded correctly");
+  }
+  
   try {
-    // Create new document
-    const doc = new jsPDF();
-    
-    // Verify if jspdf-autotable is properly loaded
-    if (typeof doc.autoTable !== 'function') {
-      console.error("jspdf-autotable is not properly loaded");
-      throw new Error("PDF generation failed: Required library not loaded correctly");
-    }
-    
     // Add company name centered at the top
     doc.setFontSize(24);
     doc.text("MASIG", doc.internal.pageSize.width / 2, 30, { align: "center" });
